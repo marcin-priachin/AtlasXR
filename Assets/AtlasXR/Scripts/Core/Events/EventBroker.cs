@@ -9,7 +9,7 @@ namespace AtlasXR.Core.Events
 
         public void Publish<TEvent>(TEvent eventData) where TEvent : IEvent
         {
-            if (eventData == null)
+            if (eventData is null)
             {
                 throw new ArgumentNullException(nameof(eventData));
             }

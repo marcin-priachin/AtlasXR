@@ -1,0 +1,71 @@
+{
+  "id": "replace_air_filter",
+  "title": "Replace Air Filter",
+  "description": "Mock procedure for replacing a rectangular HVAC air filter.",
+  "version": "0.1.0",
+  "estimatedDurationMinutes": 8,
+  "steps": [
+    {
+      "id": "locate_filter_housing",
+      "title": "Locate filter housing",
+      "instruction": "Find the return air grille or filter slot on the HVAC unit.",
+      "confirmationPrompt": "Filter housing located?",
+      "required": true,
+      "toolIds": [],
+      "safetyNotes": [
+        "Do not remove panels from energized equipment."
+      ],
+      "expectedOutcome": "The user is positioned at the filter access point."
+    },
+    {
+      "id": "power_down_unit",
+      "title": "Power down unit",
+      "instruction": "Switch the thermostat or unit control to off before opening the housing.",
+      "confirmationPrompt": "Unit powered down?",
+      "required": true,
+      "toolIds": [],
+      "safetyNotes": [
+        "Keep hands clear of moving fan components."
+      ],
+      "expectedOutcome": "The HVAC unit is off."
+    },
+    {
+      "id": "remove_old_filter",
+      "title": "Remove old filter",
+      "instruction": "Open the grille or access cover and slide out the old filter, noting the airflow arrow direction.",
+      "confirmationPrompt": "Old filter removed?",
+      "required": true,
+      "toolIds": [
+        "gloves"
+      ],
+      "safetyNotes": [
+        "Wear gloves if the filter is dusty."
+      ],
+      "expectedOutcome": "The old filter is removed and airflow direction is known."
+    },
+    {
+      "id": "install_new_filter",
+      "title": "Install new filter",
+      "instruction": "Insert the new filter with the airflow arrow pointing toward the blower or ductwork.",
+      "confirmationPrompt": "New filter installed in the correct direction?",
+      "required": true,
+      "toolIds": [
+        "replacement_filter"
+      ],
+      "safetyNotes": [],
+      "expectedOutcome": "The new filter is seated correctly."
+    },
+    {
+      "id": "close_and_restart",
+      "title": "Close housing and restart",
+      "instruction": "Close the grille or cover, then restore the thermostat or unit control to normal operation.",
+      "confirmationPrompt": "Housing closed and unit restarted?",
+      "required": true,
+      "toolIds": [],
+      "safetyNotes": [
+        "Confirm the cover is secured before restarting."
+      ],
+      "expectedOutcome": "The HVAC system is operating with the new filter installed."
+    }
+  ]
+}
