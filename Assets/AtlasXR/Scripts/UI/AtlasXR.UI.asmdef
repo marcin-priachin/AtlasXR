@@ -1,0 +1,17 @@
+{
+    "name": "AtlasXR.UI",
+    "rootNamespace": "AtlasXR.UI",
+    "references": [
+        "AtlasXR.Core",
+        "AtlasXR.App"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

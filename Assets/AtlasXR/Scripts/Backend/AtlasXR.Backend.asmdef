@@ -1,0 +1,16 @@
+{
+    "name": "AtlasXR.Backend",
+    "rootNamespace": "AtlasXR.Backend",
+    "references": [
+        "AtlasXR.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

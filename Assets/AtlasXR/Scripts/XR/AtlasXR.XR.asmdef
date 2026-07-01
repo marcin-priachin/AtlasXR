@@ -1,0 +1,17 @@
+{
+    "name": "AtlasXR.XR",
+    "rootNamespace": "AtlasXR.XR",
+    "references": [
+        "AtlasXR.Core",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
