@@ -3,7 +3,8 @@
     "rootNamespace": "AtlasXR.App",
     "references": [
         "AtlasXR.Core",
-        "AtlasXR.Procedures"
+        "AtlasXR.Procedures",
+        "AtlasXR.XR"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -462,19 +462,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 432c6150868f0944ba424e2144e94954, type: 3}
   m_Name: 
   m_EditorClassIdentifier: AtlasXR.App::AtlasXR.App.Bootstrap.AtlasXRBootstrapper
---- !u!114 &1294842773
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1294842770}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6b7d343f6311f5446a6c4d55319df524, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: AtlasXR.App::AtlasXR.App.Bootstrap.ProcedureTypingTester
-  procedureJson: {fileID: 4900000, guid: 7a866f7b4444484cb18bb43e86e699ab, type: 3}
 --- !u!4 &1294842772
 Transform:
   m_ObjectHideFlags: 0
@@ -490,6 +477,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1294842773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1294842770}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b7d343f6311f5446a6c4d55319df524, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AtlasXR.App::AtlasXR.App.Bootstrap.ProcedureTypingTester
+  procedureJson: {fileID: 4900000, guid: 7a866f7b4444484cb18bb43e86e699ab, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

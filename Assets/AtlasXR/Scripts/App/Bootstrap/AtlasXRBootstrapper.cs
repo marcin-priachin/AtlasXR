@@ -3,6 +3,7 @@ using AtlasXR.Core.Logging;
 using AtlasXR.Core.Services;
 using AtlasXR.Procedures.Runtime;
 using AtlasXR.Procedures.Validation;
+using AtlasXR.XR.Highlighting;
 using UnityEngine;
 
 namespace AtlasXR.App.Bootstrap
@@ -33,12 +34,17 @@ namespace AtlasXR.App.Bootstrap
             var eventBroker = new EventBroker();
             var procedureValidator = new ProcedureValidator();
             var procedureEngine = new ProcedureEngine(procedureValidator, eventBroker, logger);
+            var highlightService = new HighlightService(logger);
+            var procedureHighlightToolBridge = new ProcedureHighlightToolBridge(eventBroker, highlightService, logger);
 
             services.Register<IServiceRegistry>(services);
             services.Register<IAtlasLogger>(logger);
             services.Register<IEventBroker>(eventBroker);
             services.Register(procedureValidator);
             services.Register(procedureEngine);
+            services.Register<IHighlightService>(highlightService);
+            services.Register(highlightService);
+            services.Register(procedureHighlightToolBridge);
 
             Services = services;
             Events = eventBroker;

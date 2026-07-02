@@ -36,6 +36,7 @@
       "confirmationPrompt": "Old filter removed?",
       "required": true,
       "toolIds": [
+        "HighlightComponent:Cylinder",
         "gloves"
       ],
       "safetyNotes": [
