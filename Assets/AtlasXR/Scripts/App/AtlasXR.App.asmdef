@@ -2,6 +2,7 @@
     "name": "AtlasXR.App",
     "rootNamespace": "AtlasXR.App",
     "references": [
+        "AtlasXR.AI",
         "AtlasXR.Core",
         "AtlasXR.Procedures",
         "AtlasXR.XR"

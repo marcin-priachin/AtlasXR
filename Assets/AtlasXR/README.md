@@ -74,9 +74,21 @@ Initial interaction can be typed input. Voice comes later.
 
 ### Milestone 3: Real AI Provider
 
-- Add an OpenAI or other provider implementation behind an interface.
+- Add an OpenAI provider implementation behind an interface.
 - Keep mock provider available for offline testing.
 - Parse AI output into safe structured tool requests.
+
+## OpenAI Provider Setup
+
+AtlasXR reads the OpenAI API key from the `OPENAI_API_KEY` environment variable. Do not store API keys in Unity assets, scenes, source files, or committed project settings.
+
+Optional environment variable:
+
+```text
+OPENAI_MODEL=gpt-5.5
+```
+
+If `OPENAI_API_KEY` is missing, startup keeps using `MockAgentProvider` so the debug procedure loop works without internet or API access. If the OpenAI request fails at runtime, `AgentService` logs the failure and falls back to the mock provider for that command.
 
 ### Milestone 4: Quest / XR Integration
 

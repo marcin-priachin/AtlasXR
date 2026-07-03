@@ -2,7 +2,9 @@
     "name": "AtlasXR.AI",
     "rootNamespace": "AtlasXR.AI",
     "references": [
-        "AtlasXR.Core"
+        "AtlasXR.Core",
+        "AtlasXR.Procedures",
+        "AtlasXR.XR"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

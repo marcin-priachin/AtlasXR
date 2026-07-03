@@ -1,3 +1,7 @@
+using System.Text;
+using System.Threading;
+using AtlasXR.AI.Runtime;
+using AtlasXR.AI.Tools;
 using AtlasXR.Core.Logging;
 using AtlasXR.Procedures.Data;
 using AtlasXR.Procedures.Runtime;
@@ -10,6 +14,8 @@ namespace AtlasXR.App.Bootstrap
         [SerializeField] private TextAsset procedureJson;
 
         private ProcedureEngine procedureEngine;
+        private IAgentService agentService;
+        private IAgentToolExecutor agentToolExecutor;
         private IAtlasLogger logger;
         private ProcedureDefinition procedure;
         private string command = "start";
@@ -25,6 +31,8 @@ namespace AtlasXR.App.Bootstrap
             }
 
             procedureEngine = AtlasXRBootstrapper.Services.Resolve<ProcedureEngine>();
+            agentService = AtlasXRBootstrapper.Services.Resolve<IAgentService>();
+            agentToolExecutor = AtlasXRBootstrapper.Services.Resolve<IAgentToolExecutor>();
             AtlasXRBootstrapper.Services.TryResolve(out logger);
             LoadProcedure();
         }
@@ -76,7 +84,7 @@ namespace AtlasXR.App.Bootstrap
             status = $"Loaded '{procedure.id}'. Type 'start' to begin.";
         }
 
-        private void ExecuteCommand()
+        private async void ExecuteCommand()
         {
             if (procedureEngine == null || procedure == null)
             {
@@ -108,7 +116,7 @@ namespace AtlasXR.App.Bootstrap
                         status = "Procedure reset. Type 'start' to begin again.";
                         break;
                     default:
-                        status = $"Unknown command: {command}";
+                        await ExecuteAgentCommand(command);
                         break;
                 }
             }
@@ -117,6 +125,38 @@ namespace AtlasXR.App.Bootstrap
                 status = exception.Message;
                 logger?.Warning(exception.Message);
             }
+        }
+
+        private async System.Threading.Tasks.Task ExecuteAgentCommand(string userCommand)
+        {
+            if (agentService == null || agentToolExecutor == null)
+            {
+                status = "Agent services are not ready.";
+                return;
+            }
+
+            if (procedureEngine.Progress.State == ProcedureEngineState.Idle)
+            {
+                procedureEngine.Start(procedure);
+            }
+
+            status = "Agent is thinking...";
+            var response = await agentService.HandleCommandAsync(
+                userCommand,
+                procedure,
+                procedureEngine.Progress.CurrentStepIndex,
+                CancellationToken.None);
+
+            var results = agentToolExecutor.ExecuteAll(response.toolCalls);
+            var builder = new StringBuilder(response.assistantMessage);
+            foreach (var result in results)
+            {
+                builder.AppendLine();
+                builder.Append(result.success ? "Tool: " : "Tool failed: ");
+                builder.Append(result.message);
+            }
+
+            status = builder.ToString();
         }
 
         private void DrawProcedure()
