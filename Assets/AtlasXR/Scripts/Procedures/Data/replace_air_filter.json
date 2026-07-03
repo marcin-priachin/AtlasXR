@@ -11,7 +11,7 @@
       "instruction": "Find the return air grille or filter slot on the HVAC unit.",
       "confirmationPrompt": "Filter housing located?",
       "required": true,
-      "toolIds": [],
+      "targetComponentIds": [],
       "safetyNotes": [
         "Do not remove panels from energized equipment."
       ],
@@ -23,7 +23,7 @@
       "instruction": "Switch the thermostat or unit control to off before opening the housing.",
       "confirmationPrompt": "Unit powered down?",
       "required": true,
-      "toolIds": [],
+      "targetComponentIds": [],
       "safetyNotes": [
         "Keep hands clear of moving fan components."
       ],
@@ -35,9 +35,8 @@
       "instruction": "Open the grille or access cover and slide out the old filter, noting the airflow arrow direction.",
       "confirmationPrompt": "Old filter removed?",
       "required": true,
-      "toolIds": [
-        "HighlightComponent:Cylinder",
-        "gloves"
+      "targetComponentIds": [
+        "air_filter"
       ],
       "safetyNotes": [
         "Wear gloves if the filter is dusty."
@@ -50,8 +49,8 @@
       "instruction": "Insert the new filter with the airflow arrow pointing toward the blower or ductwork.",
       "confirmationPrompt": "New filter installed in the correct direction?",
       "required": true,
-      "toolIds": [
-        "replacement_filter"
+      "targetComponentIds": [
+        "air_filter"
       ],
       "safetyNotes": [],
       "expectedOutcome": "The new filter is seated correctly."
@@ -62,7 +61,7 @@
       "instruction": "Close the grille or cover, then restore the thermostat or unit control to normal operation.",
       "confirmationPrompt": "Housing closed and unit restarted?",
       "required": true,
-      "toolIds": [],
+      "targetComponentIds": [],
       "safetyNotes": [
         "Confirm the cover is secured before restarting."
       ],

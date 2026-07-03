@@ -64,6 +64,56 @@ namespace AtlasXR.Procedures.Validation
                 {
                     result.AddError($"Step '{step.id}' instruction is required.");
                 }
+
+                if (string.IsNullOrWhiteSpace(step.confirmationPrompt))
+                {
+                    result.AddError($"Step '{step.id}' confirmation prompt is required.");
+                }
+
+                ValidateListValues(step.id, "target component id", step.targetComponentIds, result);
+                ValidateListValues(step.id, "safety note", step.safetyNotes, result);
+
+                ValidateDeprecatedToolIds(step, result);
+            }
+        }
+
+#pragma warning disable 618
+        private static void ValidateDeprecatedToolIds(
+            ProcedureStepDefinition step,
+            ProcedureValidationResult result)
+        {
+            if (step.toolIds != null && step.toolIds.Count > 0)
+            {
+                result.AddError($"Step '{step.id}' uses deprecated toolIds. Use targetComponentIds for procedure targets and agent tool calls for actions.");
+            }
+        }
+#pragma warning restore 618
+
+        private static void ValidateListValues(
+            string stepId,
+            string itemName,
+            IReadOnlyList<string> values,
+            ProcedureValidationResult result)
+        {
+            if (values == null)
+            {
+                return;
+            }
+
+            var uniqueValues = new HashSet<string>();
+            for (var i = 0; i < values.Count; i++)
+            {
+                var value = values[i];
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    result.AddError($"Step '{stepId}' {itemName} {i} is empty.");
+                    continue;
+                }
+
+                if (!uniqueValues.Add(value.Trim()))
+                {
+                    result.AddError($"Step '{stepId}' has duplicate {itemName}: {value}");
+                }
             }
         }
     }

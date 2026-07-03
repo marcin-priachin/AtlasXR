@@ -242,7 +242,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 144a23d7a8e14e2fa4cc75405fadb135, type: 3}
   m_Name: 
   m_EditorClassIdentifier: AtlasXR.XR::AtlasXR.XR.Highlighting.EquipmentComponent
-  componentId: Cylinder
+  componentId: air_filter
   targetRenderers:
   - {fileID: 5048656412452719062}
   highlightColor: {r: 1, g: 0.78, b: 0.1, a: 1}

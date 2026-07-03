@@ -8,9 +8,6 @@ namespace AtlasXR.App.Bootstrap
 {
     public sealed class ProcedureHighlightToolBridge : IDisposable
     {
-        private const string HighlightComponentPrefix = "HighlightComponent:";
-        private const string ClearHighlightToolId = "ClearHighlight";
-
         private readonly IHighlightService highlightService;
         private readonly IAtlasLogger logger;
         private readonly IDisposable stepChangedSubscription;
@@ -41,34 +38,21 @@ namespace AtlasXR.App.Bootstrap
 
         private void OnProcedureStepChanged(ProcedureStepChangedEvent eventData)
         {
-            var toolIds = eventData.Step?.toolIds;
-            if (toolIds == null || toolIds.Count == 0)
+            var targetComponentIds = eventData.Step?.targetComponentIds;
+            if (targetComponentIds == null || targetComponentIds.Count == 0)
             {
                 highlightService.ClearHighlight();
                 return;
             }
 
             var highlighted = false;
-            foreach (var toolId in toolIds)
+            foreach (var componentId in targetComponentIds)
             {
-                if (string.IsNullOrWhiteSpace(toolId))
+                if (string.IsNullOrWhiteSpace(componentId))
                 {
                     continue;
                 }
 
-                if (string.Equals(toolId, ClearHighlightToolId, StringComparison.OrdinalIgnoreCase))
-                {
-                    highlightService.ClearHighlight();
-                    highlighted = false;
-                    continue;
-                }
-
-                if (!toolId.StartsWith(HighlightComponentPrefix, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                var componentId = toolId.Substring(HighlightComponentPrefix.Length).Trim();
                 highlighted = highlightService.HighlightComponent(componentId) || highlighted;
             }
 

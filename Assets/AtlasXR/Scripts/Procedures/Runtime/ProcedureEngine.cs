@@ -23,9 +23,9 @@ namespace AtlasXR.Procedures.Runtime
             this.logger = logger;
         }
 
-        public ProcedureProgress Progress => new ProcedureProgress(currentProcedure, currentStepIndex, state);
+        public ProcedureProgress Progress => new ProcedureProgress(currentProcedure?.Clone(), currentStepIndex, state);
 
-        public ProcedureDefinition CurrentProcedure => currentProcedure;
+        public ProcedureDefinition CurrentProcedure => currentProcedure?.Clone();
 
         public ProcedureStepDefinition CurrentStep => Progress.CurrentStep;
 
@@ -38,19 +38,19 @@ namespace AtlasXR.Procedures.Runtime
 
             var procedure = JsonUtility.FromJson<ProcedureDefinition>(json);
             ValidateOrThrow(procedure);
-            return procedure;
+            return procedure.Clone();
         }
 
         public void Start(ProcedureDefinition procedure)
         {
             ValidateOrThrow(procedure);
 
-            currentProcedure = procedure;
+            currentProcedure = procedure.Clone();
             currentStepIndex = 0;
             state = ProcedureEngineState.Running;
 
             logger?.Info($"Started procedure '{procedure.id}'.");
-            eventBroker?.Publish(new ProcedureStartedEvent(procedure));
+            eventBroker?.Publish(new ProcedureStartedEvent(currentProcedure.Clone()));
             PublishCurrentStep();
         }
 
@@ -92,12 +92,15 @@ namespace AtlasXR.Procedures.Runtime
         {
             state = ProcedureEngineState.Completed;
             logger?.Info($"Completed procedure '{currentProcedure.id}'.");
-            eventBroker?.Publish(new ProcedureCompletedEvent(currentProcedure));
+            eventBroker?.Publish(new ProcedureCompletedEvent(currentProcedure.Clone()));
         }
 
         private void PublishCurrentStep()
         {
-            eventBroker?.Publish(new ProcedureStepChangedEvent(currentProcedure, CurrentStep, currentStepIndex));
+            eventBroker?.Publish(new ProcedureStepChangedEvent(
+                currentProcedure.Clone(),
+                currentProcedure.steps[currentStepIndex].Clone(),
+                currentStepIndex));
         }
 
         private void EnsureRunning()
