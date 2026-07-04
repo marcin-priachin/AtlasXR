@@ -6,7 +6,8 @@
         "AtlasXR.Core",
         "AtlasXR.Procedures",
         "AtlasXR.Scenarios",
-        "AtlasXR.XR"
+        "AtlasXR.XR",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -29,6 +29,15 @@ namespace AtlasXR.App.Bootstrap
 
             DontDestroyOnLoad(gameObject);
             BuildServices();
+            EnsureQuestOpenXRRuntime();
+        }
+
+        private void EnsureQuestOpenXRRuntime()
+        {
+            if (GetComponent<QuestOpenXRRuntimeBootstrapper>() == null)
+            {
+                gameObject.AddComponent<QuestOpenXRRuntimeBootstrapper>();
+            }
         }
 
         private static void BuildServices()

@@ -97,6 +97,30 @@ If `OPENAI_API_KEY` is missing, startup keeps using `MockAgentProvider` so the d
 - Add passthrough if available.
 - Add hand tracking later.
 
+## Quest 2 / OpenXR Setup
+
+The runtime now creates a lightweight OpenXR headset experience from the bootstrap scene:
+
+- the main camera is driven by the XR headset pose
+- left and right Quest controller rays are created at runtime
+- a world-space procedure panel appears in front of the user
+- controller trigger presses can run `Start`, `Next`, `Back`, `Reset`, and `Ask`
+
+Before building for Quest 2, open Unity and run:
+
+```text
+AtlasXR > Setup > Configure Quest 2 OpenXR
+```
+
+Then verify:
+
+- Build target is Android.
+- Android architecture is ARM64.
+- XR Plug-in Management for Android has OpenXR enabled.
+- OpenXR has Meta Quest / Oculus Quest support enabled if Unity shows that feature group.
+
+The desktop `ProcedureTypingTester` is still available for editor debugging. The headset panel is the Quest-friendly control path.
+
 ### Milestone 5: Voice Interaction
 
 - Add speech-to-text.
