@@ -6,6 +6,7 @@ using AtlasXR.Core.Logging;
 using AtlasXR.Core.Services;
 using AtlasXR.Procedures.Runtime;
 using AtlasXR.Procedures.Validation;
+using AtlasXR.Scenarios.Runtime;
 using AtlasXR.XR.Highlighting;
 using UnityEngine;
 
@@ -38,6 +39,7 @@ namespace AtlasXR.App.Bootstrap
             var procedureValidator = new ProcedureValidator();
             var procedureEngine = new ProcedureEngine(procedureValidator, eventBroker, logger);
             var highlightService = new HighlightService(logger);
+            var learningScenarioService = new LearningScenarioService(procedureEngine, logger);
             var procedureHighlightToolBridge = new ProcedureHighlightToolBridge(eventBroker, highlightService, logger);
             var mockAgentProvider = new MockAgentProvider();
             var agentProvider = CreateAgentProvider(mockAgentProvider, logger);
@@ -49,6 +51,8 @@ namespace AtlasXR.App.Bootstrap
             services.Register<IEventBroker>(eventBroker);
             services.Register(procedureValidator);
             services.Register(procedureEngine);
+            services.Register<ILearningScenarioService>(learningScenarioService);
+            services.Register(learningScenarioService);
             services.Register<IHighlightService>(highlightService);
             services.Register(highlightService);
             services.Register(procedureHighlightToolBridge);

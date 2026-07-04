@@ -1,11 +1,9 @@
 {
-    "name": "AtlasXR.App",
-    "rootNamespace": "AtlasXR.App",
+    "name": "AtlasXR.Scenarios",
+    "rootNamespace": "AtlasXR.Scenarios",
     "references": [
-        "AtlasXR.AI",
         "AtlasXR.Core",
         "AtlasXR.Procedures",
-        "AtlasXR.Scenarios",
         "AtlasXR.XR"
     ],
     "includePlatforms": [],

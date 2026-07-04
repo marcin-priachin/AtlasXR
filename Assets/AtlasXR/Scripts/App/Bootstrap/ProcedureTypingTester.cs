@@ -5,6 +5,7 @@ using AtlasXR.AI.Tools;
 using AtlasXR.Core.Logging;
 using AtlasXR.Procedures.Data;
 using AtlasXR.Procedures.Runtime;
+using AtlasXR.Scenarios.Runtime;
 using UnityEngine;
 
 namespace AtlasXR.App.Bootstrap
@@ -14,6 +15,7 @@ namespace AtlasXR.App.Bootstrap
         [SerializeField] private TextAsset procedureJson;
 
         private ProcedureEngine procedureEngine;
+        private ILearningScenarioService learningScenarioService;
         private IAgentService agentService;
         private IAgentToolExecutor agentToolExecutor;
         private IAtlasLogger logger;
@@ -31,6 +33,7 @@ namespace AtlasXR.App.Bootstrap
             }
 
             procedureEngine = AtlasXRBootstrapper.Services.Resolve<ProcedureEngine>();
+            AtlasXRBootstrapper.Services.TryResolve(out learningScenarioService);
             agentService = AtlasXRBootstrapper.Services.Resolve<IAgentService>();
             agentToolExecutor = AtlasXRBootstrapper.Services.Resolve<IAgentToolExecutor>();
             AtlasXRBootstrapper.Services.TryResolve(out logger);
@@ -76,7 +79,10 @@ namespace AtlasXR.App.Bootstrap
         {
             if (procedureJson == null)
             {
-                status = "Assign replace_air_filter.json to Procedure Typing Tester.";
+                procedure = learningScenarioService?.CurrentProcedure;
+                status = procedure == null
+                    ? "Assign a procedure JSON or load a learning scenario."
+                    : $"Using scenario procedure '{procedure.id}'.";
                 return;
             }
 

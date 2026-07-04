@@ -23,6 +23,8 @@ Typed command
 
 Voice, backend, and advanced XR come later.
 
+Scene content for the vertical slice should load through a `LearningScenarioDefinition` so the demo can swap equipment prefabs and procedure data without changing the bootstrap scene.
+
 ## Milestone 0 — Project Setup
 
 Goal: create a clean starting point for Codex-assisted development.
@@ -102,6 +104,8 @@ Goal: connect tool calls to visible Unity scene behavior.
 - Create `EquipmentComponent` MonoBehaviour.
 - Create highlight service.
 - Create simple highlight visual effect.
+- Create a learning scenario definition that links the equipment prefab to the procedure JSON.
+- Load the equipment prefab through the scenario loader instead of placing scenario-specific equipment directly in the bootstrap scene.
 - Connect `HighlightComponent` tool to scene object highlighting.
 - Add `ClearHighlight` tool.
 

@@ -282,6 +282,26 @@ A step should contain:
 
 Avoid hardcoding procedure steps in scene scripts.
 
+## Learning Scenario Conventions
+
+Learning scenarios connect authored procedure data to Unity scene content.
+
+A learning scenario should contain:
+
+- scenario id
+- display name
+- equipment prefab
+- procedure JSON
+- spawn settings
+
+Use `LearningScenarioDefinition` assets to load equipment prefabs for demo scenarios.
+
+Do not place scenario-specific equipment directly in the bootstrap scene when it can be loaded from a scenario definition.
+
+The scenario loader may instantiate and destroy equipment prefabs, but it should not own procedure progression, AI decisions, highlighting behavior, or UI behavior.
+
+Prefer direct ScriptableObject references for the MVP. Do not use `Resources.Load` for scenario content. Do not add Addressables until the project needs downloadable content, remote catalogs, or many large scenario assets.
+
 ## Async Conventions
 
 Use `async`/`await` for IO-like operations such as:
