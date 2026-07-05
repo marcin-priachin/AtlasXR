@@ -3,7 +3,8 @@
     "rootNamespace": "AtlasXR.XR",
     "references": [
         "AtlasXR.Core",
-        "Unity.InputSystem"
+        "Unity.InputSystem",
+        "Unity.XR.Hands"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -29,6 +29,9 @@ namespace AtlasXR.App.Bootstrap
         [SerializeField] private ProviderSelectionMode speechToTextProviderMode = ProviderSelectionMode.Auto;
         [SerializeField] private ProviderSelectionMode textToSpeechProviderMode = ProviderSelectionMode.Auto;
 
+        [Header("XR")]
+        [SerializeField] private XRInteractionMode xrInteractionMode = XRInteractionMode.Controllers;
+
         public static IServiceRegistry Services { get; private set; }
 
         public static IEventBroker Events { get; private set; }
@@ -48,10 +51,13 @@ namespace AtlasXR.App.Bootstrap
 
         private void EnsureQuestOpenXRRuntime()
         {
-            if (GetComponent<QuestOpenXRRuntimeBootstrapper>() == null)
+            var questRuntime = GetComponent<QuestOpenXRRuntimeBootstrapper>();
+            if (questRuntime == null)
             {
-                gameObject.AddComponent<QuestOpenXRRuntimeBootstrapper>();
+                questRuntime = gameObject.AddComponent<QuestOpenXRRuntimeBootstrapper>();
             }
+
+            questRuntime.Configure(xrInteractionMode);
         }
 
         private void BuildServices()

@@ -466,6 +466,7 @@ MonoBehaviour:
   agentProviderMode: 0
   speechToTextProviderMode: 0
   textToSpeechProviderMode: 0
+  xrInteractionMode: 1
 --- !u!4 &1294842772
 Transform:
   m_ObjectHideFlags: 0

@@ -117,16 +117,18 @@ Speech-to-text accepts WAV audio bytes or a Unity `AudioClip` through `ISpeechTo
 - Add OpenXR.
 - Use controller ray interaction first.
 - Add passthrough if available.
-- Add hand tracking later.
+- Add optional hand tracking.
 
 ## Quest 2 / OpenXR Setup
 
 The runtime now creates a lightweight OpenXR headset experience from the bootstrap scene:
 
 - the main camera is driven by the XR headset pose
-- left and right Quest controller rays are created at runtime
+- left and right Quest controller rays are created at runtime by default
+- optional hand rays can be used instead of controllers through `AtlasXRBootstrapper > XR Interaction Mode`
+- hand-tracking mode creates simple 3D procedural hand visuals driven by Unity XR Hands joints
 - a world-space procedure panel appears in front of the user
-- controller trigger presses can run `Start`, `Next`, `Back`, `Reset`, and `Ask`
+- controller trigger presses or hand pinch/select presses can run `Start`, `Next`, `Back`, `Reset`, and `Ask`
 
 Before building for Quest 2, open Unity and run:
 
@@ -140,6 +142,8 @@ Then verify:
 - Android architecture is ARM64.
 - XR Plug-in Management for Android has OpenXR enabled.
 - OpenXR has Meta Quest / Oculus Quest support enabled if Unity shows that feature group.
+- OpenXR hand interaction profiles are enabled when testing `Hands` or `Controllers And Hands` mode.
+- Unity has resolved the `com.unity.xr.hands` package before testing hand tracking.
 - Microphone usage description is set for Android builds when testing voice input.
 
 Unity may log `XR: Error setting active audio output driver. Falling back to default.` during OpenXR startup on desktop. This is an XR/audio backend warning from Unity, not an OpenAI voice provider failure. If scene audio still plays through the default device, it can be treated as non-blocking for the current demo.

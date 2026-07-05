@@ -178,7 +178,7 @@ Goal: make the demo run on Quest with basic XR interaction.
 
 The same maintenance procedure flow works in headset using basic XR interaction.
 
-Hand tracking is not required yet.
+Optional hand tracking input is available as a runtime mode, but controller rays remain the default Quest interaction path.
 
 Passthrough is optional. Initial Quest passthrough bootstrap is now wired through `QuestPassthroughController`.
 
@@ -211,7 +211,7 @@ Goal: make the demo feel more relevant to enterprise XR.
 
 - Add passthrough mode where supported. (Initial Quest/OpenXR alpha blend path added; Meta/Oculus passthrough layer is used automatically when the Meta XR SDK is present.)
 - Add simple world-space UI.
-- Add optional hand tracking.
+- Add optional hand tracking. (OpenXR hand rays and procedural hand visuals now use Unity XR Hands joints in XR-origin space; pinch/select can press the same headset UI buttons as controller rays.)
 - Improve spatial placement of instruction panels and arrows.
 
 ### Done When
