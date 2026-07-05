@@ -1,4 +1,5 @@
 using AtlasXR.XR.Input;
+using AtlasXR.XR.Passthrough;
 using UnityEngine;
 using UnityEngine.XR;
 
@@ -8,6 +9,7 @@ namespace AtlasXR.App.Bootstrap
     {
         [SerializeField] private bool createControllerRays = true;
         [SerializeField] private bool createHeadsetPanel = true;
+        [SerializeField] private bool enableQuestPassthrough = true;
         [SerializeField] private Vector3 rigPosition = new Vector3(0f, 0f, -1.6f);
 
         private Transform xrOrigin;
@@ -30,6 +32,11 @@ namespace AtlasXR.App.Bootstrap
             {
                 var panel = new GameObject("XR Procedure Panel");
                 panel.AddComponent<XRProcedurePanel>().FollowTarget = cameraTransform;
+            }
+
+            if (enableQuestPassthrough)
+            {
+                EnsureQuestPassthrough(cameraTransform.GetComponent<Camera>());
             }
         }
 
@@ -54,6 +61,17 @@ namespace AtlasXR.App.Bootstrap
                 mainCamera.gameObject.AddComponent<XRHeadPoseDriver>();
             }
             return mainCamera.transform;
+        }
+
+        private void EnsureQuestPassthrough(Camera targetCamera)
+        {
+            var passthrough = GetComponent<QuestPassthroughController>();
+            if (passthrough == null)
+            {
+                passthrough = gameObject.AddComponent<QuestPassthroughController>();
+            }
+
+            passthrough.TargetCamera = targetCamera;
         }
 
         private void EnsureControllerRay(string name, XRNode node)

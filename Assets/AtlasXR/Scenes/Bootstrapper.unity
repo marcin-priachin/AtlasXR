@@ -465,7 +465,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: AtlasXR.App::AtlasXR.App.Bootstrap.AtlasXRBootstrapper
   agentProviderMode: 0
   speechToTextProviderMode: 0
-  textToSpeechProviderMode: 1
+  textToSpeechProviderMode: 0
 --- !u!4 &1294842772
 Transform:
   m_ObjectHideFlags: 0

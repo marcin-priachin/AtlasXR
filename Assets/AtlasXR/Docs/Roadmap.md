@@ -180,7 +180,7 @@ The same maintenance procedure flow works in headset using basic XR interaction.
 
 Hand tracking is not required yet.
 
-Passthrough is optional.
+Passthrough is optional. Initial Quest passthrough bootstrap is now wired through `QuestPassthroughController`.
 
 ## Milestone 6 — Voice Interaction
 
@@ -209,7 +209,7 @@ Goal: make the demo feel more relevant to enterprise XR.
 
 ### Tasks
 
-- Add passthrough mode where supported.
+- Add passthrough mode where supported. (Initial Quest/OpenXR alpha blend path added; Meta/Oculus passthrough layer is used automatically when the Meta XR SDK is present.)
 - Add simple world-space UI.
 - Add optional hand tracking.
 - Improve spatial placement of instruction panels and arrows.
