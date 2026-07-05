@@ -12,7 +12,7 @@ namespace AtlasXR.Voice.TextToSpeech
         {
             return Task.FromResult(new TextToSpeechResult
             {
-                audioData = WavAudioUtility.CreateSilence(0.25f, 24000, 1),
+                audioData = WavAudioUtility.CreateTone(0.35f, 24000, 1, 880f, 0.35f),
                 format = "wav",
                 mimeType = "audio/wav"
             });

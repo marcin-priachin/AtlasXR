@@ -73,7 +73,7 @@ namespace AtlasXR.Voice.TextToSpeech
                 $"\"model\":\"{JsonEscape(model)}\"," +
                 $"\"voice\":\"{JsonEscape(voice)}\"," +
                 $"\"input\":\"{JsonEscape(request.text.Trim())}\"," +
-                $"\"format\":\"{JsonEscape(format)}\"";
+                $"\"response_format\":\"{JsonEscape(format)}\"";
 
             if (!string.IsNullOrWhiteSpace(request.instructions))
             {

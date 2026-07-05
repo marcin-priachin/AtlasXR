@@ -14,9 +14,21 @@ using UnityEngine;
 
 namespace AtlasXR.App.Bootstrap
 {
+    public enum ProviderSelectionMode
+    {
+        Auto,
+        Mock,
+        OpenAI
+    }
+
     [DefaultExecutionOrder(-1000)]
     public sealed class AtlasXRBootstrapper : MonoBehaviour
     {
+        [Header("Provider Selection")]
+        [SerializeField] private ProviderSelectionMode agentProviderMode = ProviderSelectionMode.Auto;
+        [SerializeField] private ProviderSelectionMode speechToTextProviderMode = ProviderSelectionMode.Auto;
+        [SerializeField] private ProviderSelectionMode textToSpeechProviderMode = ProviderSelectionMode.Auto;
+
         public static IServiceRegistry Services { get; private set; }
 
         public static IEventBroker Events { get; private set; }
@@ -42,7 +54,7 @@ namespace AtlasXR.App.Bootstrap
             }
         }
 
-        private static void BuildServices()
+        private void BuildServices()
         {
             var services = new ServiceRegistry();
             var logger = new UnityAtlasLogger();
@@ -91,11 +103,23 @@ namespace AtlasXR.App.Bootstrap
             logger.Info("Bootstrap complete.");
         }
 
-        private static IAgentProvider CreateAgentProvider(MockAgentProvider mockAgentProvider, IAtlasLogger logger)
+        private IAgentProvider CreateAgentProvider(MockAgentProvider mockAgentProvider, IAtlasLogger logger)
         {
+            if (agentProviderMode == ProviderSelectionMode.Mock)
+            {
+                logger.Info("Using mock agent provider. Provider mode: Mock.");
+                return mockAgentProvider;
+            }
+
             var apiKey = GetEnvironmentVariable("OPENAI_API_KEY", out var apiKeySource);
             if (string.IsNullOrWhiteSpace(apiKey))
             {
+                if (agentProviderMode == ProviderSelectionMode.OpenAI)
+                {
+                    logger.Warning("Agent provider mode is OpenAI, but OPENAI_API_KEY is not set. Using mock agent provider.");
+                    return mockAgentProvider;
+                }
+
                 logger.Warning("OPENAI_API_KEY is not set. Using mock agent provider.");
                 return mockAgentProvider;
             }
@@ -108,13 +132,25 @@ namespace AtlasXR.App.Bootstrap
             return new OpenAIAgentProvider(apiKey, model, logger);
         }
 
-        private static ISpeechToTextProvider CreateSpeechToTextProvider(
+        private ISpeechToTextProvider CreateSpeechToTextProvider(
             MockSpeechToTextProvider mockSpeechToTextProvider,
             IAtlasLogger logger)
         {
+            if (speechToTextProviderMode == ProviderSelectionMode.Mock)
+            {
+                logger.Info("Using mock speech-to-text provider. Provider mode: Mock.");
+                return mockSpeechToTextProvider;
+            }
+
             var apiKey = GetEnvironmentVariable("OPENAI_API_KEY", out var apiKeySource);
             if (string.IsNullOrWhiteSpace(apiKey))
             {
+                if (speechToTextProviderMode == ProviderSelectionMode.OpenAI)
+                {
+                    logger.Warning("Speech-to-text provider mode is OpenAI, but OPENAI_API_KEY is not set. Using mock speech-to-text provider.");
+                    return mockSpeechToTextProvider;
+                }
+
                 logger.Warning("OPENAI_API_KEY is not set. Using mock speech-to-text provider.");
                 return mockSpeechToTextProvider;
             }
@@ -127,13 +163,25 @@ namespace AtlasXR.App.Bootstrap
             return new OpenAISpeechToTextProvider(apiKey, model, logger);
         }
 
-        private static ITextToSpeechProvider CreateTextToSpeechProvider(
+        private ITextToSpeechProvider CreateTextToSpeechProvider(
             MockTextToSpeechProvider mockTextToSpeechProvider,
             IAtlasLogger logger)
         {
+            if (textToSpeechProviderMode == ProviderSelectionMode.Mock)
+            {
+                logger.Info("Using mock text-to-speech provider. Provider mode: Mock.");
+                return mockTextToSpeechProvider;
+            }
+
             var apiKey = GetEnvironmentVariable("OPENAI_API_KEY", out var apiKeySource);
             if (string.IsNullOrWhiteSpace(apiKey))
             {
+                if (textToSpeechProviderMode == ProviderSelectionMode.OpenAI)
+                {
+                    logger.Warning("Text-to-speech provider mode is OpenAI, but OPENAI_API_KEY is not set. Using mock text-to-speech provider.");
+                    return mockTextToSpeechProvider;
+                }
+
                 logger.Warning("OPENAI_API_KEY is not set. Using mock text-to-speech provider.");
                 return mockTextToSpeechProvider;
             }

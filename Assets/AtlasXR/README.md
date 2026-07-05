@@ -82,6 +82,12 @@ Initial interaction can be typed input. Voice comes later.
 
 AtlasXR reads the OpenAI API key from the `OPENAI_API_KEY` environment variable. Do not store API keys in Unity assets, scenes, source files, or committed project settings.
 
+The `AtlasXRBootstrapper` also exposes provider mode dropdowns in the Unity Inspector:
+
+- `Auto` uses OpenAI when `OPENAI_API_KEY` is present, otherwise mock.
+- `Mock` forces the mock provider even when environment variables are set.
+- `OpenAI` prefers OpenAI and logs a warning if the API key is missing.
+
 Optional environment variable:
 
 ```text
@@ -93,6 +99,8 @@ If `OPENAI_API_KEY` is missing, startup keeps using `MockAgentProvider` so the d
 ## OpenAI Voice Provider Setup
 
 AtlasXR also registers OpenAI speech-to-text and text-to-speech providers behind voice service interfaces. They use the same `OPENAI_API_KEY` environment variable as the agent provider and fall back to mock voice providers when no key is configured.
+
+Use the `AtlasXRBootstrapper` speech-to-text and text-to-speech provider mode dropdowns to force mock voice providers without changing environment variables. The mock text-to-speech provider returns a short audible placeholder.
 
 Optional environment variables:
 

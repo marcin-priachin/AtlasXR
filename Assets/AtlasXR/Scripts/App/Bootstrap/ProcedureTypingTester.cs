@@ -7,6 +7,7 @@ using AtlasXR.Procedures.Data;
 using AtlasXR.Procedures.Runtime;
 using AtlasXR.Scenarios.Runtime;
 using AtlasXR.Voice.SpeechToText;
+using AtlasXR.Voice.TextToSpeech;
 using UnityEngine;
 #if UNITY_ANDROID && !UNITY_EDITOR
 using UnityEngine.Android;
@@ -26,6 +27,7 @@ namespace AtlasXR.App.Bootstrap
         private IAgentService agentService;
         private IAgentToolExecutor agentToolExecutor;
         private ISpeechToTextService speechToTextService;
+        private ITextToSpeechService textToSpeechService;
         private IAtlasLogger logger;
         private ProcedureDefinition procedure;
         private string command = "start";
@@ -33,7 +35,11 @@ namespace AtlasXR.App.Bootstrap
         private string status = "Type 'start' and press Enter.";
         private Vector2 scrollPosition;
         private AudioClip voiceRecording;
+        private AudioSource speechAudioSource;
+        private AudioClip currentSpokenClip;
+        private int lastSpokenStepIndex = -1;
         private bool isRecordingVoice;
+        private bool spokenOutputEnabled = true;
 
         private void Start()
         {
@@ -48,7 +54,9 @@ namespace AtlasXR.App.Bootstrap
             agentService = AtlasXRBootstrapper.Services.Resolve<IAgentService>();
             agentToolExecutor = AtlasXRBootstrapper.Services.Resolve<IAgentToolExecutor>();
             AtlasXRBootstrapper.Services.TryResolve(out speechToTextService);
+            AtlasXRBootstrapper.Services.TryResolve(out textToSpeechService);
             AtlasXRBootstrapper.Services.TryResolve(out logger);
+            EnsureSpeechAudioSource();
             LoadProcedure();
         }
 
@@ -87,6 +95,8 @@ namespace AtlasXR.App.Bootstrap
                     StartVoiceRecording();
                 }
             }
+
+            spokenOutputEnabled = GUILayout.Toggle(spokenOutputEnabled, "Speak instructions and agent answers");
 
             var currentEvent = Event.current;
             if (currentEvent.type == EventType.KeyDown &&
@@ -155,16 +165,19 @@ namespace AtlasXR.App.Bootstrap
                     case "start":
                         procedureEngine.Start(procedure);
                         status = "Procedure started.";
+                        SpeakCurrentStepInstruction();
                         break;
                     case "next":
                         procedureEngine.CompleteCurrentStep();
                         status = procedureEngine.Progress.State == ProcedureEngineState.Completed
                             ? "Procedure completed."
                             : "Advanced to next step.";
+                        SpeakCurrentStepInstruction();
                         break;
                     case "back":
                         procedureEngine.MovePrevious();
                         status = "Moved to previous step.";
+                        SpeakCurrentStepInstruction();
                         break;
                     case "reset":
                         procedureEngine.Reset();
@@ -310,6 +323,125 @@ namespace AtlasXR.App.Bootstrap
             }
 
             status = builder.ToString();
+            SpeakText(response.assistantMessage);
+        }
+
+        private void SpeakCurrentStepInstruction()
+        {
+            if (procedureEngine == null || !procedureEngine.Progress.HasCurrentStep)
+            {
+                return;
+            }
+
+            var progress = procedureEngine.Progress;
+            if (progress.CurrentStepIndex == lastSpokenStepIndex)
+            {
+                return;
+            }
+
+            lastSpokenStepIndex = progress.CurrentStepIndex;
+            var step = progress.CurrentStep;
+            SpeakText($"{step.title}. {step.instruction}");
+        }
+
+        private async void SpeakText(string text)
+        {
+            if (!spokenOutputEnabled || textToSpeechService == null || string.IsNullOrWhiteSpace(text))
+            {
+                return;
+            }
+
+            try
+            {
+                var clip = await textToSpeechService.SynthesizeClipAsync(
+                    new TextToSpeechRequest
+                    {
+                        text = text.Trim(),
+                        instructions = "Speak clearly and concisely as an XR maintenance assistant."
+                    },
+                    CancellationToken.None);
+
+                PlaySpeechClip(clip);
+            }
+            catch (System.Exception exception)
+            {
+                logger?.Warning($"Text-to-speech failed. {exception.Message}");
+            }
+        }
+
+        private void PlaySpeechClip(AudioClip clip)
+        {
+            EnsureSpeechAudioSource();
+            if (clip == null || speechAudioSource == null)
+            {
+                logger?.Warning("Speech audio could not play because the clip or audio source was unavailable.");
+                return;
+            }
+
+            EnsureAudioOutputReady();
+            speechAudioSource.Stop();
+            if (currentSpokenClip != null)
+            {
+                Destroy(currentSpokenClip);
+            }
+
+            currentSpokenClip = clip;
+            speechAudioSource.clip = clip;
+            speechAudioSource.volume = 1f;
+            speechAudioSource.Play();
+        }
+
+        private void ConfigureSpeechAudioSource()
+        {
+            if (speechAudioSource == null)
+            {
+                return;
+            }
+
+            speechAudioSource.playOnAwake = false;
+            speechAudioSource.loop = false;
+            speechAudioSource.spatialBlend = 0f;
+            speechAudioSource.volume = 1f;
+            speechAudioSource.mute = false;
+            speechAudioSource.enabled = true;
+            speechAudioSource.ignoreListenerPause = true;
+        }
+
+        private static void EnsureAudioOutputReady()
+        {
+            AudioListener.pause = false;
+            AudioListener.volume = 1f;
+            var listener = FindFirstObjectByType<AudioListener>();
+            if (listener == null && Camera.main != null)
+            {
+                listener = Camera.main.gameObject.AddComponent<AudioListener>();
+            }
+
+            if (listener != null)
+            {
+                listener.enabled = true;
+            }
+        }
+
+        private void EnsureSpeechAudioSource()
+        {
+            if (speechAudioSource == null)
+            {
+                var audioObject = GameObject.Find("AtlasXR Runtime Audio");
+                if (audioObject == null)
+                {
+                    audioObject = new GameObject("AtlasXR Runtime Audio");
+                    DontDestroyOnLoad(audioObject);
+                }
+
+                speechAudioSource = audioObject.GetComponent<AudioSource>();
+                if (speechAudioSource == null)
+                {
+                    speechAudioSource = audioObject.AddComponent<AudioSource>();
+                }
+            }
+
+            ConfigureSpeechAudioSource();
         }
 
         private void DrawProcedure()

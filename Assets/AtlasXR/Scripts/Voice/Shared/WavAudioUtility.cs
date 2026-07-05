@@ -25,6 +25,24 @@ namespace AtlasXR.Voice.Shared
             return Encode(new float[sampleCount], sampleRate, channels);
         }
 
+        public static byte[] CreateTone(float durationSeconds, int sampleRate, int channels, float frequency, float amplitude)
+        {
+            var frames = Mathf.Max(1, Mathf.CeilToInt(durationSeconds * sampleRate));
+            var samples = new float[frames * channels];
+            var clampedAmplitude = Mathf.Clamp01(amplitude);
+
+            for (var frame = 0; frame < frames; frame++)
+            {
+                var sample = Mathf.Sin(2f * Mathf.PI * frequency * frame / sampleRate) * clampedAmplitude;
+                for (var channel = 0; channel < channels; channel++)
+                {
+                    samples[frame * channels + channel] = sample;
+                }
+            }
+
+            return Encode(samples, sampleRate, channels);
+        }
+
         public static AudioClip Decode(byte[] wavData, string clipName)
         {
             if (wavData == null || wavData.Length < 44)
@@ -34,12 +52,13 @@ namespace AtlasXR.Voice.Shared
 
             using (var reader = new BinaryReader(new MemoryStream(wavData)))
             {
-                var riff = new string(reader.ReadChars(4));
-                reader.ReadInt32();
-                var wave = new string(reader.ReadChars(4));
+                var riff = ReadChunkId(reader);
+                reader.ReadUInt32();
+                var wave = ReadChunkId(reader);
                 if (riff != "RIFF" || wave != "WAVE")
                 {
-                    throw new InvalidOperationException("Audio data is not a WAV file.");
+                    throw new InvalidOperationException(
+                        $"Audio data is not a WAV file. Header was '{riff}/{wave}'. Check the text-to-speech response format.");
                 }
 
                 short channels = 0;
@@ -49,8 +68,20 @@ namespace AtlasXR.Voice.Shared
 
                 while (reader.BaseStream.Position < reader.BaseStream.Length)
                 {
-                    var chunkId = new string(reader.ReadChars(4));
-                    var chunkSize = reader.ReadInt32();
+                    var chunkId = ReadChunkId(reader);
+                    var chunkSize = reader.ReadUInt32();
+                    var remainingBytes = reader.BaseStream.Length - reader.BaseStream.Position;
+                    if (chunkId == "data" && chunkSize == uint.MaxValue)
+                    {
+                        chunkSize = CheckedRemainingSize(remainingBytes);
+                    }
+
+                    if (chunkSize > remainingBytes)
+                    {
+                        throw new InvalidOperationException(
+                            $"WAV chunk '{chunkId}' declares {chunkSize} bytes, but only {remainingBytes} bytes remain.");
+                    }
+
                     if (chunkId == "fmt ")
                     {
                         var audioFormat = reader.ReadInt16();
@@ -72,11 +103,16 @@ namespace AtlasXR.Voice.Shared
                     }
                     else if (chunkId == "data")
                     {
-                        sampleBytes = reader.ReadBytes(chunkSize);
+                        sampleBytes = reader.ReadBytes(CheckedChunkSize(chunkSize));
                     }
                     else
                     {
                         reader.BaseStream.Position += chunkSize;
+                    }
+
+                    if ((chunkSize & 1) == 1 && reader.BaseStream.Position < reader.BaseStream.Length)
+                    {
+                        reader.BaseStream.Position += 1;
                     }
                 }
 
@@ -126,6 +162,31 @@ namespace AtlasXR.Voice.Shared
 
                 return stream.ToArray();
             }
+        }
+
+        private static string ReadChunkId(BinaryReader reader)
+        {
+            return Encoding.ASCII.GetString(reader.ReadBytes(4));
+        }
+
+        private static int CheckedChunkSize(uint chunkSize)
+        {
+            if (chunkSize > int.MaxValue)
+            {
+                throw new InvalidOperationException($"WAV chunk is too large to decode: {chunkSize} bytes.");
+            }
+
+            return (int)chunkSize;
+        }
+
+        private static uint CheckedRemainingSize(long remainingBytes)
+        {
+            if (remainingBytes < 0 || remainingBytes > uint.MaxValue)
+            {
+                throw new InvalidOperationException($"WAV remaining data size is invalid: {remainingBytes} bytes.");
+            }
+
+            return (uint)remainingBytes;
         }
 
         private static float[] DecodeSamples(byte[] sampleBytes, short bitsPerSample)

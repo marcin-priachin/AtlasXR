@@ -6,6 +6,7 @@ using AtlasXR.Procedures.Data;
 using AtlasXR.Procedures.Runtime;
 using AtlasXR.Scenarios.Runtime;
 using AtlasXR.Voice.SpeechToText;
+using AtlasXR.Voice.TextToSpeech;
 using AtlasXR.XR.Input;
 using UnityEngine;
 using UnityEngine.UI;
@@ -28,6 +29,7 @@ namespace AtlasXR.App.Bootstrap
         private IAgentService agentService;
         private IAgentToolExecutor toolExecutor;
         private ISpeechToTextService speechToTextService;
+        private ITextToSpeechService textToSpeechService;
         private Text titleText;
         private Text bodyText;
         private Text transcriptText;
@@ -35,7 +37,11 @@ namespace AtlasXR.App.Bootstrap
         private string transcribedSpeech = "No speech transcribed yet.";
         private string status = "Loading scenario...";
         private AudioClip voiceRecording;
+        private AudioSource speechAudioSource;
+        private AudioClip currentSpokenClip;
+        private int lastSpokenStepIndex = -1;
         private bool isRecordingVoice;
+        private bool spokenOutputEnabled = true;
 
         public Transform FollowTarget { get; set; }
 
@@ -72,6 +78,8 @@ namespace AtlasXR.App.Bootstrap
             agentService = AtlasXRBootstrapper.Services.Resolve<IAgentService>();
             toolExecutor = AtlasXRBootstrapper.Services.Resolve<IAgentToolExecutor>();
             AtlasXRBootstrapper.Services.TryResolve(out speechToTextService);
+            AtlasXRBootstrapper.Services.TryResolve(out textToSpeechService);
+            EnsureSpeechAudioSource();
         }
 
         private void BuildPanel()
@@ -96,7 +104,7 @@ namespace AtlasXR.App.Bootstrap
 
             titleText = CreateText("Title", canvasRect, new Vector2(0f, 214f), new Vector2(800f, 70f), 42, TextAnchor.MiddleLeft);
             bodyText = CreateText("Body", canvasRect, new Vector2(0f, 62f), new Vector2(800f, 220f), 27, TextAnchor.UpperLeft);
-            transcriptText = CreateText("Transcript", canvasRect, new Vector2(0f, -125f), new Vector2(800f, 54f), 22, TextAnchor.UpperLeft);
+            transcriptText = CreateText("Transcript", canvasRect, new Vector2(0f, -125f), new Vector2(800f, 72f), 20, TextAnchor.UpperLeft);
 
             CreateButton(canvasRect, "Start", new Vector2(-360f, -218f), StartProcedure);
             CreateButton(canvasRect, "Next", new Vector2(-180f, -218f), NextStep);
@@ -104,6 +112,7 @@ namespace AtlasXR.App.Bootstrap
             CreateButton(canvasRect, "Reset", new Vector2(180f, -218f), ResetProcedure);
             CreateButton(canvasRect, "Ask", new Vector2(360f, -218f), AskCurrentStep);
             CreateButton(canvasRect, "Voice", new Vector2(360f, -142f), ToggleVoiceCommand);
+            CreateButton(canvasRect, "Speak", new Vector2(180f, -142f), ToggleSpokenOutput);
         }
 
         private Text CreateText(
@@ -193,6 +202,7 @@ namespace AtlasXR.App.Bootstrap
             procedureEngine.Start(procedure);
             status = "Procedure started.";
             Refresh();
+            SpeakCurrentStepInstruction();
         }
 
         private void NextStep()
@@ -203,6 +213,7 @@ namespace AtlasXR.App.Bootstrap
                 status = procedureEngine.Progress.State == ProcedureEngineState.Completed
                     ? "Procedure completed."
                     : "Advanced to next step.";
+                SpeakCurrentStepInstruction();
             });
         }
 
@@ -212,6 +223,7 @@ namespace AtlasXR.App.Bootstrap
             {
                 procedureEngine.MovePrevious();
                 status = "Moved to previous step.";
+                SpeakCurrentStepInstruction();
             });
         }
 
@@ -263,6 +275,7 @@ namespace AtlasXR.App.Bootstrap
                 }
 
                 status = builder.ToString();
+                SpeakText(response.assistantMessage);
             }
             catch (Exception exception)
             {
@@ -270,6 +283,133 @@ namespace AtlasXR.App.Bootstrap
             }
 
             Refresh();
+        }
+
+        private void ToggleSpokenOutput()
+        {
+            spokenOutputEnabled = !spokenOutputEnabled;
+            status = spokenOutputEnabled ? "Spoken output enabled." : "Spoken output muted.";
+            Refresh();
+        }
+
+        private void SpeakCurrentStepInstruction()
+        {
+            if (procedureEngine == null || !procedureEngine.Progress.HasCurrentStep)
+            {
+                return;
+            }
+
+            var progress = procedureEngine.Progress;
+            if (progress.CurrentStepIndex == lastSpokenStepIndex)
+            {
+                return;
+            }
+
+            lastSpokenStepIndex = progress.CurrentStepIndex;
+            var step = progress.CurrentStep;
+            SpeakText($"{step.title}. {step.instruction}");
+        }
+
+        private async void SpeakText(string text)
+        {
+            if (!spokenOutputEnabled || textToSpeechService == null || string.IsNullOrWhiteSpace(text))
+            {
+                return;
+            }
+
+            try
+            {
+                var clip = await textToSpeechService.SynthesizeClipAsync(
+                    new TextToSpeechRequest
+                    {
+                        text = text.Trim(),
+                        instructions = "Speak clearly and concisely as an XR maintenance assistant."
+                    },
+                    default);
+
+                PlaySpeechClip(clip);
+            }
+            catch (Exception exception)
+            {
+                status = $"Text-to-speech failed: {exception.Message}";
+                Refresh();
+            }
+        }
+
+        private void PlaySpeechClip(AudioClip clip)
+        {
+            EnsureSpeechAudioSource();
+            if (clip == null || speechAudioSource == null)
+            {
+                status = "Speech audio could not play.";
+                Refresh();
+                return;
+            }
+
+            EnsureAudioOutputReady();
+            speechAudioSource.Stop();
+            if (currentSpokenClip != null)
+            {
+                Destroy(currentSpokenClip);
+            }
+
+            currentSpokenClip = clip;
+            speechAudioSource.clip = clip;
+            speechAudioSource.volume = 1f;
+            speechAudioSource.Play();
+        }
+
+        private void ConfigureSpeechAudioSource()
+        {
+            if (speechAudioSource == null)
+            {
+                return;
+            }
+
+            speechAudioSource.playOnAwake = false;
+            speechAudioSource.loop = false;
+            speechAudioSource.spatialBlend = 0f;
+            speechAudioSource.volume = 1f;
+            speechAudioSource.mute = false;
+            speechAudioSource.enabled = true;
+            speechAudioSource.ignoreListenerPause = true;
+        }
+
+        private static void EnsureAudioOutputReady()
+        {
+            AudioListener.pause = false;
+            AudioListener.volume = 1f;
+            var listener = FindFirstObjectByType<AudioListener>();
+            if (listener == null && Camera.main != null)
+            {
+                listener = Camera.main.gameObject.AddComponent<AudioListener>();
+            }
+
+            if (listener != null)
+            {
+                listener.enabled = true;
+            }
+        }
+
+        private void EnsureSpeechAudioSource()
+        {
+            if (speechAudioSource == null)
+            {
+                var audioObject = GameObject.Find("AtlasXR Runtime Audio");
+                if (audioObject == null)
+                {
+                    audioObject = new GameObject("AtlasXR Runtime Audio");
+                    DontDestroyOnLoad(audioObject);
+                }
+
+                speechAudioSource = audioObject.GetComponent<AudioSource>();
+                if (speechAudioSource == null)
+                {
+                    speechAudioSource = audioObject.AddComponent<AudioSource>();
+                }
+            }
+
+            ConfigureSpeechAudioSource();
         }
 
         private void ToggleVoiceCommand()

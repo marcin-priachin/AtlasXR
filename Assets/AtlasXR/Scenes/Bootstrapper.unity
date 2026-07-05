@@ -463,6 +463,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 432c6150868f0944ba424e2144e94954, type: 3}
   m_Name: 
   m_EditorClassIdentifier: AtlasXR.App::AtlasXR.App.Bootstrap.AtlasXRBootstrapper
+  agentProviderMode: 0
+  speechToTextProviderMode: 0
+  textToSpeechProviderMode: 1
 --- !u!4 &1294842772
 Transform:
   m_ObjectHideFlags: 0
