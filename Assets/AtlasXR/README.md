@@ -90,6 +90,20 @@ OPENAI_MODEL=gpt-5.5
 
 If `OPENAI_API_KEY` is missing, startup keeps using `MockAgentProvider` so the debug procedure loop works without internet or API access. If the OpenAI request fails at runtime, `AgentService` logs the failure and falls back to the mock provider for that command.
 
+## OpenAI Voice Provider Setup
+
+AtlasXR also registers OpenAI speech-to-text and text-to-speech providers behind voice service interfaces. They use the same `OPENAI_API_KEY` environment variable as the agent provider and fall back to mock voice providers when no key is configured.
+
+Optional environment variables:
+
+```text
+OPENAI_STT_MODEL=gpt-4o-mini-transcribe
+OPENAI_TTS_MODEL=gpt-4o-mini-tts
+OPENAI_TTS_VOICE=alloy
+```
+
+Speech-to-text accepts WAV audio bytes or a Unity `AudioClip` through `ISpeechToTextService`. Text-to-speech returns audio bytes and can convert WAV output to a Unity `AudioClip` through `ITextToSpeechService`.
+
 ### Milestone 4: Quest / XR Integration
 
 - Add OpenXR.
@@ -118,13 +132,17 @@ Then verify:
 - Android architecture is ARM64.
 - XR Plug-in Management for Android has OpenXR enabled.
 - OpenXR has Meta Quest / Oculus Quest support enabled if Unity shows that feature group.
+- Microphone usage description is set for Android builds when testing voice input.
+
+Unity may log `XR: Error setting active audio output driver. Falling back to default.` during OpenXR startup on desktop. This is an XR/audio backend warning from Unity, not an OpenAI voice provider failure. If scene audio still plays through the default device, it can be treated as non-blocking for the current demo.
 
 The desktop `ProcedureTypingTester` is still available for editor debugging. The headset panel is the Quest-friendly control path.
 
 ### Milestone 5: Voice Interaction
 
-- Add speech-to-text.
-- Add text-to-speech.
+- Add speech-to-text service and provider support.
+- Add text-to-speech service and provider support.
+- Add microphone capture and playback UI.
 - Keep typed input as a debug fallback.
 
 ## Proposed Folder Structure

@@ -7,6 +7,8 @@ using AtlasXR.Core.Services;
 using AtlasXR.Procedures.Runtime;
 using AtlasXR.Procedures.Validation;
 using AtlasXR.Scenarios.Runtime;
+using AtlasXR.Voice.SpeechToText;
+using AtlasXR.Voice.TextToSpeech;
 using AtlasXR.XR.Highlighting;
 using UnityEngine;
 
@@ -54,6 +56,13 @@ namespace AtlasXR.App.Bootstrap
             var agentProvider = CreateAgentProvider(mockAgentProvider, logger);
             var agentService = new AgentService(agentProvider, mockAgentProvider, logger);
             var agentToolExecutor = new AgentToolExecutor(procedureEngine, highlightService, logger);
+            var mockSpeechToTextProvider = new MockSpeechToTextProvider();
+            var speechToTextProvider = CreateSpeechToTextProvider(mockSpeechToTextProvider, logger);
+            var speechToTextService = new SpeechToTextService(speechToTextProvider, mockSpeechToTextProvider, logger);
+            var mockTextToSpeechProvider = new MockTextToSpeechProvider();
+            var textToSpeechProvider = CreateTextToSpeechProvider(mockTextToSpeechProvider, logger);
+            var textToSpeechService =
+                new FallbackTextToSpeechService(textToSpeechProvider, mockTextToSpeechProvider, logger);
 
             services.Register<IServiceRegistry>(services);
             services.Register<IAtlasLogger>(logger);
@@ -69,6 +78,12 @@ namespace AtlasXR.App.Bootstrap
             services.Register<IAgentProvider>(agentProvider);
             services.Register<IAgentService>(agentService);
             services.Register<IAgentToolExecutor>(agentToolExecutor);
+            services.Register<MockSpeechToTextProvider>(mockSpeechToTextProvider);
+            services.Register<ISpeechToTextProvider>(speechToTextProvider);
+            services.Register<ISpeechToTextService>(speechToTextService);
+            services.Register<MockTextToSpeechProvider>(mockTextToSpeechProvider);
+            services.Register<ITextToSpeechProvider>(textToSpeechProvider);
+            services.Register<ITextToSpeechService>(textToSpeechService);
 
             Services = services;
             Events = eventBroker;
@@ -91,6 +106,45 @@ namespace AtlasXR.App.Bootstrap
                 : $"Using OpenAI agent provider with model '{model}'. API key source: {apiKeySource}.");
 
             return new OpenAIAgentProvider(apiKey, model, logger);
+        }
+
+        private static ISpeechToTextProvider CreateSpeechToTextProvider(
+            MockSpeechToTextProvider mockSpeechToTextProvider,
+            IAtlasLogger logger)
+        {
+            var apiKey = GetEnvironmentVariable("OPENAI_API_KEY", out var apiKeySource);
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                logger.Warning("OPENAI_API_KEY is not set. Using mock speech-to-text provider.");
+                return mockSpeechToTextProvider;
+            }
+
+            var model = GetEnvironmentVariable("OPENAI_STT_MODEL", out _);
+            logger.Info(string.IsNullOrWhiteSpace(model)
+                ? $"Using OpenAI speech-to-text provider with default model. API key source: {apiKeySource}."
+                : $"Using OpenAI speech-to-text provider with model '{model}'. API key source: {apiKeySource}.");
+
+            return new OpenAISpeechToTextProvider(apiKey, model, logger);
+        }
+
+        private static ITextToSpeechProvider CreateTextToSpeechProvider(
+            MockTextToSpeechProvider mockTextToSpeechProvider,
+            IAtlasLogger logger)
+        {
+            var apiKey = GetEnvironmentVariable("OPENAI_API_KEY", out var apiKeySource);
+            if (string.IsNullOrWhiteSpace(apiKey))
+            {
+                logger.Warning("OPENAI_API_KEY is not set. Using mock text-to-speech provider.");
+                return mockTextToSpeechProvider;
+            }
+
+            var model = GetEnvironmentVariable("OPENAI_TTS_MODEL", out _);
+            var voice = GetEnvironmentVariable("OPENAI_TTS_VOICE", out _);
+            logger.Info(string.IsNullOrWhiteSpace(model)
+                ? $"Using OpenAI text-to-speech provider with default model. API key source: {apiKeySource}."
+                : $"Using OpenAI text-to-speech provider with model '{model}'. API key source: {apiKeySource}.");
+
+            return new OpenAITextToSpeechProvider(apiKey, model, voice, logger);
         }
 
         private static string GetEnvironmentVariable(string variableName, out string source)

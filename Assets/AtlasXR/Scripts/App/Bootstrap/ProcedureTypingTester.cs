@@ -6,23 +6,34 @@ using AtlasXR.Core.Logging;
 using AtlasXR.Procedures.Data;
 using AtlasXR.Procedures.Runtime;
 using AtlasXR.Scenarios.Runtime;
+using AtlasXR.Voice.SpeechToText;
 using UnityEngine;
+#if UNITY_ANDROID && !UNITY_EDITOR
+using UnityEngine.Android;
+#endif
 
 namespace AtlasXR.App.Bootstrap
 {
     public sealed class ProcedureTypingTester : MonoBehaviour
     {
+        private const int VoiceSampleRate = 16000;
+        private const int MaxVoiceSeconds = 8;
+
         [SerializeField] private TextAsset procedureJson;
 
         private ProcedureEngine procedureEngine;
         private ILearningScenarioService learningScenarioService;
         private IAgentService agentService;
         private IAgentToolExecutor agentToolExecutor;
+        private ISpeechToTextService speechToTextService;
         private IAtlasLogger logger;
         private ProcedureDefinition procedure;
         private string command = "start";
+        private string transcribedSpeech = "No speech transcribed yet.";
         private string status = "Type 'start' and press Enter.";
         private Vector2 scrollPosition;
+        private AudioClip voiceRecording;
+        private bool isRecordingVoice;
 
         private void Start()
         {
@@ -36,6 +47,7 @@ namespace AtlasXR.App.Bootstrap
             AtlasXRBootstrapper.Services.TryResolve(out learningScenarioService);
             agentService = AtlasXRBootstrapper.Services.Resolve<IAgentService>();
             agentToolExecutor = AtlasXRBootstrapper.Services.Resolve<IAgentToolExecutor>();
+            AtlasXRBootstrapper.Services.TryResolve(out speechToTextService);
             AtlasXRBootstrapper.Services.TryResolve(out logger);
             LoadProcedure();
         }
@@ -56,6 +68,26 @@ namespace AtlasXR.App.Bootstrap
             }
             GUILayout.EndHorizontal();
 
+            GUILayout.Space(6);
+            GUILayout.Label("Transcribed speech");
+            transcribedSpeech = GUILayout.TextField(transcribedSpeech);
+            if (GUILayout.Button("Use Transcript As Command"))
+            {
+                command = transcribedSpeech;
+            }
+
+            if (GUILayout.Button(isRecordingVoice ? "Stop Voice Command" : "Record Voice Command"))
+            {
+                if (isRecordingVoice)
+                {
+                    StopVoiceRecordingAndRun();
+                }
+                else
+                {
+                    StartVoiceRecording();
+                }
+            }
+
             var currentEvent = Event.current;
             if (currentEvent.type == EventType.KeyDown &&
                 currentEvent.keyCode == KeyCode.Return &&
@@ -75,6 +107,18 @@ namespace AtlasXR.App.Bootstrap
             GUILayout.EndArea();
         }
 
+        public void SetTranscribedSpeech(string transcript, bool copyToCommand)
+        {
+            transcribedSpeech = string.IsNullOrWhiteSpace(transcript)
+                ? "No speech transcribed yet."
+                : transcript.Trim();
+
+            if (copyToCommand && !string.IsNullOrWhiteSpace(transcript))
+            {
+                command = transcript.Trim();
+            }
+        }
+
         private void LoadProcedure()
         {
             if (procedureJson == null)
@@ -91,6 +135,11 @@ namespace AtlasXR.App.Bootstrap
         }
 
         private async void ExecuteCommand()
+        {
+            await ExecuteCommandAsync();
+        }
+
+        private async System.Threading.Tasks.Task ExecuteCommandAsync()
         {
             if (procedureEngine == null || procedure == null)
             {
@@ -131,6 +180,104 @@ namespace AtlasXR.App.Bootstrap
                 status = exception.Message;
                 logger?.Warning(exception.Message);
             }
+        }
+
+        private void StartVoiceRecording()
+        {
+            if (speechToTextService == null)
+            {
+                status = "Speech-to-text service is not ready.";
+                return;
+            }
+
+            if (Microphone.devices == null || Microphone.devices.Length == 0)
+            {
+                status = "No microphone device found.";
+                return;
+            }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (!Permission.HasUserAuthorizedPermission(Permission.Microphone))
+            {
+                Permission.RequestUserPermission(Permission.Microphone);
+                status = "Microphone permission requested. Press voice again after allowing it.";
+                return;
+            }
+#endif
+
+            voiceRecording = Microphone.Start(null, false, MaxVoiceSeconds, VoiceSampleRate);
+            isRecordingVoice = voiceRecording != null;
+            status = isRecordingVoice ? "Listening..." : "Could not start microphone recording.";
+        }
+
+        private async void StopVoiceRecordingAndRun()
+        {
+            if (!isRecordingVoice || voiceRecording == null)
+            {
+                return;
+            }
+
+            var samplePosition = Microphone.GetPosition(null);
+            Microphone.End(null);
+            isRecordingVoice = false;
+
+            var recordedClip = TrimRecording(voiceRecording, samplePosition);
+            voiceRecording = null;
+            if (recordedClip == null)
+            {
+                status = "No voice audio was captured.";
+                return;
+            }
+
+            try
+            {
+                status = "Transcribing voice...";
+                var result = await speechToTextService.TranscribeAsync(
+                    recordedClip,
+                    "Maintenance assistant command",
+                    CancellationToken.None);
+
+                SetTranscribedSpeech(result?.text, true);
+                if (string.IsNullOrWhiteSpace(result?.text))
+                {
+                    status = "No speech was transcribed.";
+                    return;
+                }
+
+                await ExecuteCommandAsync();
+            }
+            catch (System.Exception exception)
+            {
+                status = exception.Message;
+                logger?.Warning(exception.Message);
+            }
+            finally
+            {
+                Destroy(recordedClip);
+            }
+        }
+
+        private static AudioClip TrimRecording(AudioClip sourceClip, int samplePosition)
+        {
+            if (sourceClip == null)
+            {
+                return null;
+            }
+
+            var samplesPerChannel = samplePosition > 0 ? samplePosition : sourceClip.samples;
+            samplesPerChannel = Mathf.Clamp(samplesPerChannel, 0, sourceClip.samples);
+            if (samplesPerChannel <= 0)
+            {
+                return null;
+            }
+
+            var channels = sourceClip.channels;
+            var samples = new float[samplesPerChannel * channels];
+            sourceClip.GetData(samples, 0);
+
+            var trimmedClip = AudioClip.Create("Voice Command", samplesPerChannel, channels, sourceClip.frequency, false);
+            trimmedClip.SetData(samples, 0);
+            return trimmedClip;
         }
 
         private async System.Threading.Tasks.Task ExecuteAgentCommand(string userCommand)

@@ -5,14 +5,20 @@ using AtlasXR.AI.Tools;
 using AtlasXR.Procedures.Data;
 using AtlasXR.Procedures.Runtime;
 using AtlasXR.Scenarios.Runtime;
+using AtlasXR.Voice.SpeechToText;
 using AtlasXR.XR.Input;
 using UnityEngine;
 using UnityEngine.UI;
+#if UNITY_ANDROID && !UNITY_EDITOR
+using UnityEngine.Android;
+#endif
 
 namespace AtlasXR.App.Bootstrap
 {
     public sealed class XRProcedurePanel : MonoBehaviour
     {
+        private const int VoiceSampleRate = 16000;
+        private const int MaxVoiceSeconds = 8;
         private const float PanelWidth = 900f;
         private const float PanelHeight = 560f;
         private const float WorldScale = 0.0012f;
@@ -21,10 +27,15 @@ namespace AtlasXR.App.Bootstrap
         private ILearningScenarioService scenarioService;
         private IAgentService agentService;
         private IAgentToolExecutor toolExecutor;
+        private ISpeechToTextService speechToTextService;
         private Text titleText;
         private Text bodyText;
+        private Text transcriptText;
         private Font uiFont;
+        private string transcribedSpeech = "No speech transcribed yet.";
         private string status = "Loading scenario...";
+        private AudioClip voiceRecording;
+        private bool isRecordingVoice;
 
         public Transform FollowTarget { get; set; }
 
@@ -60,6 +71,7 @@ namespace AtlasXR.App.Bootstrap
             AtlasXRBootstrapper.Services.TryResolve(out scenarioService);
             agentService = AtlasXRBootstrapper.Services.Resolve<IAgentService>();
             toolExecutor = AtlasXRBootstrapper.Services.Resolve<IAgentToolExecutor>();
+            AtlasXRBootstrapper.Services.TryResolve(out speechToTextService);
         }
 
         private void BuildPanel()
@@ -83,13 +95,15 @@ namespace AtlasXR.App.Bootstrap
             background.color = new Color(0.06f, 0.07f, 0.075f, 0.96f);
 
             titleText = CreateText("Title", canvasRect, new Vector2(0f, 214f), new Vector2(800f, 70f), 42, TextAnchor.MiddleLeft);
-            bodyText = CreateText("Body", canvasRect, new Vector2(0f, 40f), new Vector2(800f, 265f), 27, TextAnchor.UpperLeft);
+            bodyText = CreateText("Body", canvasRect, new Vector2(0f, 62f), new Vector2(800f, 220f), 27, TextAnchor.UpperLeft);
+            transcriptText = CreateText("Transcript", canvasRect, new Vector2(0f, -125f), new Vector2(800f, 54f), 22, TextAnchor.UpperLeft);
 
             CreateButton(canvasRect, "Start", new Vector2(-360f, -218f), StartProcedure);
             CreateButton(canvasRect, "Next", new Vector2(-180f, -218f), NextStep);
             CreateButton(canvasRect, "Back", new Vector2(0f, -218f), BackStep);
             CreateButton(canvasRect, "Reset", new Vector2(180f, -218f), ResetProcedure);
             CreateButton(canvasRect, "Ask", new Vector2(360f, -218f), AskCurrentStep);
+            CreateButton(canvasRect, "Voice", new Vector2(360f, -142f), ToggleVoiceCommand);
         }
 
         private Text CreateText(
@@ -142,6 +156,14 @@ namespace AtlasXR.App.Bootstrap
 
             var text = CreateText($"{label} Label", rect, Vector2.zero, rect.sizeDelta, 25, TextAnchor.MiddleCenter);
             text.text = label;
+        }
+
+        public void SetTranscribedSpeech(string transcript)
+        {
+            transcribedSpeech = string.IsNullOrWhiteSpace(transcript)
+                ? "No speech transcribed yet."
+                : transcript.Trim();
+            Refresh();
         }
 
         private Image CreateImage(string name, RectTransform parent, Vector2 anchoredPosition, Vector2 size)
@@ -202,6 +224,11 @@ namespace AtlasXR.App.Bootstrap
 
         private async void AskCurrentStep()
         {
+            await RunAgentCommand("What should I do next?");
+        }
+
+        private async System.Threading.Tasks.Task RunAgentCommand(string userCommand)
+        {
             var procedure = GetProcedure();
             if (procedure == null || agentService == null || toolExecutor == null)
             {
@@ -221,7 +248,7 @@ namespace AtlasXR.App.Bootstrap
             try
             {
                 var response = await agentService.HandleCommandAsync(
-                    "What should I do next?",
+                    userCommand,
                     procedure,
                     procedureEngine.Progress.CurrentStepIndex,
                     default);
@@ -245,6 +272,124 @@ namespace AtlasXR.App.Bootstrap
             Refresh();
         }
 
+        private void ToggleVoiceCommand()
+        {
+            if (isRecordingVoice)
+            {
+                StopVoiceRecordingAndRun();
+            }
+            else
+            {
+                StartVoiceRecording();
+            }
+        }
+
+        private void StartVoiceRecording()
+        {
+            if (speechToTextService == null)
+            {
+                status = "Speech-to-text service is not ready.";
+                Refresh();
+                return;
+            }
+
+            if (Microphone.devices == null || Microphone.devices.Length == 0)
+            {
+                status = "No microphone device found.";
+                Refresh();
+                return;
+            }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+            if (!Permission.HasUserAuthorizedPermission(Permission.Microphone))
+            {
+                Permission.RequestUserPermission(Permission.Microphone);
+                status = "Microphone permission requested. Press Voice again after allowing it.";
+                Refresh();
+                return;
+            }
+#endif
+
+            voiceRecording = Microphone.Start(null, false, MaxVoiceSeconds, VoiceSampleRate);
+            isRecordingVoice = voiceRecording != null;
+            status = isRecordingVoice ? "Listening... press Voice again to stop." : "Could not start microphone recording.";
+            Refresh();
+        }
+
+        private async void StopVoiceRecordingAndRun()
+        {
+            if (!isRecordingVoice || voiceRecording == null)
+            {
+                return;
+            }
+
+            var samplePosition = Microphone.GetPosition(null);
+            Microphone.End(null);
+            isRecordingVoice = false;
+
+            var recordedClip = TrimRecording(voiceRecording, samplePosition);
+            voiceRecording = null;
+            if (recordedClip == null)
+            {
+                status = "No voice audio was captured.";
+                Refresh();
+                return;
+            }
+
+            try
+            {
+                status = "Transcribing voice...";
+                Refresh();
+
+                var result = await speechToTextService.TranscribeAsync(
+                    recordedClip,
+                    "Maintenance assistant command",
+                    default);
+
+                SetTranscribedSpeech(result?.text);
+                if (string.IsNullOrWhiteSpace(result?.text))
+                {
+                    status = "No speech was transcribed.";
+                    Refresh();
+                    return;
+                }
+
+                await RunAgentCommand(result.text.Trim());
+            }
+            catch (Exception exception)
+            {
+                status = exception.Message;
+                Refresh();
+            }
+            finally
+            {
+                Destroy(recordedClip);
+            }
+        }
+
+        private static AudioClip TrimRecording(AudioClip sourceClip, int samplePosition)
+        {
+            if (sourceClip == null)
+            {
+                return null;
+            }
+
+            var samplesPerChannel = samplePosition > 0 ? samplePosition : sourceClip.samples;
+            samplesPerChannel = Mathf.Clamp(samplesPerChannel, 0, sourceClip.samples);
+            if (samplesPerChannel <= 0)
+            {
+                return null;
+            }
+
+            var channels = sourceClip.channels;
+            var samples = new float[samplesPerChannel * channels];
+            sourceClip.GetData(samples, 0);
+
+            var trimmedClip = AudioClip.Create("Voice Command", samplesPerChannel, channels, sourceClip.frequency, false);
+            trimmedClip.SetData(samples, 0);
+            return trimmedClip;
+        }
+
         private ProcedureDefinition GetProcedure()
         {
             return scenarioService?.CurrentProcedure ?? procedureEngine?.CurrentProcedure;
@@ -266,13 +411,14 @@ namespace AtlasXR.App.Bootstrap
 
         private void Refresh()
         {
-            if (titleText == null || bodyText == null)
+            if (titleText == null || bodyText == null || transcriptText == null)
             {
                 return;
             }
 
             var procedure = GetProcedure();
             titleText.text = procedure == null ? "AtlasXR" : procedure.title;
+            transcriptText.text = $"Heard: {transcribedSpeech}";
 
             var progress = procedureEngine?.Progress;
             if (progress == null || !progress.Value.HasCurrentStep)

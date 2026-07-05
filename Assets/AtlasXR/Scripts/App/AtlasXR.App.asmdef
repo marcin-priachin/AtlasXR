@@ -6,6 +6,7 @@
         "AtlasXR.Core",
         "AtlasXR.Procedures",
         "AtlasXR.Scenarios",
+        "AtlasXR.Voice",
         "AtlasXR.XR",
         "UnityEngine.UI"
     ],

@@ -187,10 +187,11 @@ Goal: make the demo feel like a modern AI assistant.
 
 ### Tasks
 
-- Add speech-to-text service interface.
+- Add speech-to-text service interface. (OpenAI provider support added; UI wiring pending.)
 - Add mock speech input for editor/debug mode.
-- Add real speech-to-text provider.
-- Add text-to-speech service interface.
+- Add real speech-to-text provider. (OpenAI provider and push-to-talk capture added.)
+- Show transcribed user speech in the debug/XR UI. (Transcript field and voice command wiring added.)
+- Add text-to-speech service interface. (OpenAI provider support added; playback wiring pending.)
 - Add simple spoken instruction output.
 - Keep typed input as fallback.
 
