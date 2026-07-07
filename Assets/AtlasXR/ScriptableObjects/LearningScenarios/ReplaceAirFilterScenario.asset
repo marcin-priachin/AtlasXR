@@ -17,6 +17,6 @@ MonoBehaviour:
   equipmentPrefab: {fileID: 1196535778460818098, guid: 3e83b6c0b60c5d04182af7b78d5707ff, type: 3}
   procedureJson: {fileID: 4900000, guid: 7a866f7b4444484cb18bb43e86e699ab, type: 3}
   spawnSettings:
-    localPosition: {x: -0.24405, y: 0, z: 0.53068}
+    localPosition: {x: -0.24405, y: 1, z: 0.53068}
     localEulerAngles: {x: 0, y: 0, z: 0}
     localScale: {x: 1, y: 1, z: 1}

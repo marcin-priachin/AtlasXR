@@ -120,6 +120,19 @@ namespace AtlasXR.XR.Hands
             return Vector3.Distance(thumbTip.position, indexTip.position) < 0.035f;
         }
 
+        public static bool TryGetIndexTipPosition(XRHandedness hand, out Vector3 position)
+        {
+            position = default;
+            if (!TryGetHand(hand, out var xrHand) ||
+                !TryGetJointPose(xrHand, XRHandJointID.IndexTip, out var pose))
+            {
+                return false;
+            }
+
+            position = pose.position;
+            return true;
+        }
+
         private static bool TryGetHand(XRHandedness hand, out XRHand xrHand)
         {
             var subsystem = GetRunningSubsystem();

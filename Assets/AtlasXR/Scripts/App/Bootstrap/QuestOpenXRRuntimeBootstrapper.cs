@@ -19,6 +19,8 @@ namespace AtlasXR.App.Bootstrap
         [SerializeField] private bool createHeadsetPanel = true;
         [SerializeField] private bool enableQuestPassthrough = true;
         [SerializeField] private Vector3 rigPosition = new Vector3(0f, 0f, -1.6f);
+        [SerializeField] private Vector3 leftHandPanelOffset = new Vector3(0f, 0.32f, 0.04f);
+        [SerializeField, Min(0.1f)] private float leftHandPanelScale = 0.4f;
 
         private Transform xrOrigin;
 
@@ -45,14 +47,23 @@ namespace AtlasXR.App.Bootstrap
             if (interactionMode == XRInteractionMode.Hands ||
                 interactionMode == XRInteractionMode.ControllersAndHands)
             {
-                EnsureHandRay("Left XR Hand Ray", XRHandedness.Left);
-                EnsureHandRay("Right XR Hand Ray", XRHandedness.Right);
+                if (interactionMode == XRInteractionMode.Hands)
+                {
+                    SetRayObjectsActive(false);
+                    EnsureHandVisual("Left XR Hand Visual", XRHandedness.Left);
+                    EnsureHandVisual("Right XR Hand Visual", XRHandedness.Right);
+                    EnsureHandTouchInteractor("Right XR Hand Touch", XRHandedness.Right);
+                }
+                else
+                {
+                    EnsureHandRay("Left XR Hand Ray", XRHandedness.Left);
+                    EnsureHandRay("Right XR Hand Ray", XRHandedness.Right);
+                }
             }
 
-            if (createHeadsetPanel && FindFirstObjectByType<XRProcedurePanel>() == null)
+            if (createHeadsetPanel)
             {
-                var panel = new GameObject("XR Procedure Panel");
-                panel.AddComponent<XRProcedurePanel>().FollowTarget = cameraTransform;
+                EnsureProcedurePanel(cameraTransform);
             }
 
             if (enableQuestPassthrough)
@@ -122,6 +133,78 @@ namespace AtlasXR.App.Bootstrap
 
             var visual = rayObject.AddComponent<XRHandVisual>();
             visual.Hand = hand;
+        }
+
+        private static void SetRayObjectsActive(bool active)
+        {
+            SetObjectActive("Left XR Controller Ray", active);
+            SetObjectActive("Right XR Controller Ray", active);
+            SetObjectActive("Left XR Hand Ray", active);
+            SetObjectActive("Right XR Hand Ray", active);
+        }
+
+        private static void SetObjectActive(string name, bool active)
+        {
+            var instance = GameObject.Find(name);
+            if (instance != null)
+            {
+                instance.SetActive(active);
+            }
+        }
+
+        private Transform EnsureHandVisual(string name, XRHandedness hand)
+        {
+            var visualObject = GameObject.Find(name);
+            if (visualObject == null)
+            {
+                visualObject = new GameObject(name);
+                visualObject.transform.SetParent(xrOrigin, false);
+
+                var anchor = visualObject.AddComponent<XRHandAnchor>();
+                anchor.Hand = hand;
+
+                var visual = visualObject.AddComponent<XRHandVisual>();
+                visual.Hand = hand;
+            }
+
+            return visualObject.transform;
+        }
+
+        private void EnsureHandTouchInteractor(string name, XRHandedness hand)
+        {
+            if (GameObject.Find(name) != null)
+            {
+                return;
+            }
+
+            var touchObject = new GameObject(name);
+            touchObject.transform.SetParent(xrOrigin, false);
+            var touch = touchObject.AddComponent<XRHandTouchInteractor>();
+            touch.Hand = hand;
+        }
+
+        private void EnsureProcedurePanel(Transform cameraTransform)
+        {
+            var panel = FindFirstObjectByType<XRProcedurePanel>();
+            if (panel == null)
+            {
+                panel = new GameObject("XR Procedure Panel").AddComponent<XRProcedurePanel>();
+            }
+
+            if (interactionMode == XRInteractionMode.Hands)
+            {
+                panel.FollowTarget = EnsureHandVisual("Left XR Hand Visual", XRHandedness.Left);
+                panel.ViewerTarget = cameraTransform;
+                panel.AttachToFollowTarget = true;
+                panel.AttachedLocalPosition = leftHandPanelOffset;
+                panel.PanelScale = leftHandPanelScale;
+                return;
+            }
+
+            panel.FollowTarget = cameraTransform;
+            panel.ViewerTarget = cameraTransform;
+            panel.AttachToFollowTarget = false;
+            panel.PanelScale = 1f;
         }
 
         private Transform EnsureXROrigin()

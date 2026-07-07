@@ -12,6 +12,11 @@ namespace AtlasXR.XR.Hands
             return XRHandsProvider.TryGetPose(hand, out position, out rotation);
         }
 
+        public static bool TryGetIndexTipPosition(XRHandedness hand, out Vector3 position)
+        {
+            return XRHandsProvider.TryGetIndexTipPosition(hand, out position);
+        }
+
         public static bool TryGetHandSkeleton(
             XRHandedness hand,
             out Vector3 rootPosition,

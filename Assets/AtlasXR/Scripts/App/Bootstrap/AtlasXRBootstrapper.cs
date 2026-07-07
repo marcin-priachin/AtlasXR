@@ -24,13 +24,9 @@ namespace AtlasXR.App.Bootstrap
     [DefaultExecutionOrder(-1000)]
     public sealed class AtlasXRBootstrapper : MonoBehaviour
     {
-        [Header("Provider Selection")]
-        [SerializeField] private ProviderSelectionMode agentProviderMode = ProviderSelectionMode.Auto;
-        [SerializeField] private ProviderSelectionMode speechToTextProviderMode = ProviderSelectionMode.Auto;
-        [SerializeField] private ProviderSelectionMode textToSpeechProviderMode = ProviderSelectionMode.Auto;
+        private const string RuntimeSettingsResourceName = "AtlasXRRuntimeSettingsDefinition";
 
-        [Header("XR")]
-        [SerializeField] private XRInteractionMode xrInteractionMode = XRInteractionMode.Controllers;
+        private AtlasXRRuntimeSettingsDefinition runtimeSettings;
 
         public static IServiceRegistry Services { get; private set; }
 
@@ -45,8 +41,19 @@ namespace AtlasXR.App.Bootstrap
             }
 
             DontDestroyOnLoad(gameObject);
+            ResolveRuntimeSettings();
             BuildServices();
             EnsureQuestOpenXRRuntime();
+        }
+
+        private void ResolveRuntimeSettings()
+        {
+            runtimeSettings = Resources.Load<AtlasXRRuntimeSettingsDefinition>(RuntimeSettingsResourceName);
+            if (runtimeSettings == null)
+            {
+                throw new InvalidOperationException(
+                    $"AtlasXR runtime settings asset is missing. Create Resources/{RuntimeSettingsResourceName}.asset.");
+            }
         }
 
         private void EnsureQuestOpenXRRuntime()
@@ -57,7 +64,7 @@ namespace AtlasXR.App.Bootstrap
                 questRuntime = gameObject.AddComponent<QuestOpenXRRuntimeBootstrapper>();
             }
 
-            questRuntime.Configure(xrInteractionMode);
+            questRuntime.Configure(GetXRInteractionMode());
         }
 
         private void BuildServices()
@@ -111,7 +118,8 @@ namespace AtlasXR.App.Bootstrap
 
         private IAgentProvider CreateAgentProvider(MockAgentProvider mockAgentProvider, IAtlasLogger logger)
         {
-            if (agentProviderMode == ProviderSelectionMode.Mock)
+            var providerMode = GetAgentProviderMode();
+            if (providerMode == ProviderSelectionMode.Mock)
             {
                 logger.Info("Using mock agent provider. Provider mode: Mock.");
                 return mockAgentProvider;
@@ -120,7 +128,7 @@ namespace AtlasXR.App.Bootstrap
             var apiKey = GetEnvironmentVariable("OPENAI_API_KEY", out var apiKeySource);
             if (string.IsNullOrWhiteSpace(apiKey))
             {
-                if (agentProviderMode == ProviderSelectionMode.OpenAI)
+                if (providerMode == ProviderSelectionMode.OpenAI)
                 {
                     logger.Warning("Agent provider mode is OpenAI, but OPENAI_API_KEY is not set. Using mock agent provider.");
                     return mockAgentProvider;
@@ -142,7 +150,8 @@ namespace AtlasXR.App.Bootstrap
             MockSpeechToTextProvider mockSpeechToTextProvider,
             IAtlasLogger logger)
         {
-            if (speechToTextProviderMode == ProviderSelectionMode.Mock)
+            var providerMode = GetSpeechToTextProviderMode();
+            if (providerMode == ProviderSelectionMode.Mock)
             {
                 logger.Info("Using mock speech-to-text provider. Provider mode: Mock.");
                 return mockSpeechToTextProvider;
@@ -151,7 +160,7 @@ namespace AtlasXR.App.Bootstrap
             var apiKey = GetEnvironmentVariable("OPENAI_API_KEY", out var apiKeySource);
             if (string.IsNullOrWhiteSpace(apiKey))
             {
-                if (speechToTextProviderMode == ProviderSelectionMode.OpenAI)
+                if (providerMode == ProviderSelectionMode.OpenAI)
                 {
                     logger.Warning("Speech-to-text provider mode is OpenAI, but OPENAI_API_KEY is not set. Using mock speech-to-text provider.");
                     return mockSpeechToTextProvider;
@@ -173,7 +182,8 @@ namespace AtlasXR.App.Bootstrap
             MockTextToSpeechProvider mockTextToSpeechProvider,
             IAtlasLogger logger)
         {
-            if (textToSpeechProviderMode == ProviderSelectionMode.Mock)
+            var providerMode = GetTextToSpeechProviderMode();
+            if (providerMode == ProviderSelectionMode.Mock)
             {
                 logger.Info("Using mock text-to-speech provider. Provider mode: Mock.");
                 return mockTextToSpeechProvider;
@@ -182,7 +192,7 @@ namespace AtlasXR.App.Bootstrap
             var apiKey = GetEnvironmentVariable("OPENAI_API_KEY", out var apiKeySource);
             if (string.IsNullOrWhiteSpace(apiKey))
             {
-                if (textToSpeechProviderMode == ProviderSelectionMode.OpenAI)
+                if (providerMode == ProviderSelectionMode.OpenAI)
                 {
                     logger.Warning("Text-to-speech provider mode is OpenAI, but OPENAI_API_KEY is not set. Using mock text-to-speech provider.");
                     return mockTextToSpeechProvider;
@@ -199,6 +209,26 @@ namespace AtlasXR.App.Bootstrap
                 : $"Using OpenAI text-to-speech provider with model '{model}'. API key source: {apiKeySource}.");
 
             return new OpenAITextToSpeechProvider(apiKey, model, voice, logger);
+        }
+
+        private ProviderSelectionMode GetAgentProviderMode()
+        {
+            return runtimeSettings.AgentProviderMode;
+        }
+
+        private ProviderSelectionMode GetSpeechToTextProviderMode()
+        {
+            return runtimeSettings.SpeechToTextProviderMode;
+        }
+
+        private ProviderSelectionMode GetTextToSpeechProviderMode()
+        {
+            return runtimeSettings.TextToSpeechProviderMode;
+        }
+
+        private XRInteractionMode GetXRInteractionMode()
+        {
+            return runtimeSettings.XRInteractionMode;
         }
 
         private static string GetEnvironmentVariable(string variableName, out string source)

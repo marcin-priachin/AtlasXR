@@ -131,7 +131,7 @@ Goal: replace mock-only behavior with a real AI provider while keeping the mock 
 - Keep `MockAgentProvider`.
 - Add real provider implementation.
 - Add safe API key handling.
-- Add inspector provider mode selection for Auto, Mock, and OpenAI.
+- Add runtime settings asset provider mode selection for Auto, Mock, and OpenAI.
 - Add prompt template for maintenance assistant behavior.
 - Request structured tool-call output.
 - Validate AI responses before execution.
@@ -191,7 +191,7 @@ Goal: make the demo feel like a modern AI assistant.
 - Add speech-to-text service interface. (OpenAI provider support added; UI wiring pending.)
 - Add mock speech input for editor/debug mode.
 - Add real speech-to-text provider. (OpenAI provider and push-to-talk capture added.)
-- Add provider mode selection so mock voice providers can be forced without changing environment variables.
+- Add runtime settings asset provider mode selection so mock voice providers can be forced without changing environment variables.
 - Show transcribed user speech in the debug/XR UI. (Transcript field and voice command wiring added.)
 - Add text-to-speech service interface. (OpenAI provider support and playback wiring added.)
 - Add simple spoken instruction output. (Procedure step instructions and agent answers are voiced.)

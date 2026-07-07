@@ -33,6 +33,9 @@ namespace AtlasXR.App.Bootstrap
         private Text titleText;
         private Text bodyText;
         private Text transcriptText;
+        private Text askButtonText;
+        private Transform canvasRoot;
+        private Transform cachedMainCamera;
         private Font uiFont;
         private string transcribedSpeech = "No speech transcribed yet.";
         private string status = "Loading scenario...";
@@ -44,6 +47,20 @@ namespace AtlasXR.App.Bootstrap
         private bool spokenOutputEnabled = true;
 
         public Transform FollowTarget { get; set; }
+        public Transform ViewerTarget { get; set; }
+        public bool AttachToFollowTarget { get; set; }
+        public Vector3 AttachedLocalPosition { get; set; } = new Vector3(0f, 0.12f, 0.04f);
+        public float PanelScale
+        {
+            get => panelScale;
+            set
+            {
+                panelScale = Mathf.Max(0.1f, value);
+                ApplyPanelScale();
+            }
+        }
+
+        private float panelScale = 1f;
 
         private void Start()
         {
@@ -54,15 +71,21 @@ namespace AtlasXR.App.Bootstrap
 
         private void LateUpdate()
         {
-            var target = FollowTarget != null ? FollowTarget : Camera.main?.transform;
+            var target = FollowTarget != null ? FollowTarget : GetMainCameraTransform();
             if (target == null)
             {
                 return;
             }
 
+            if (AttachToFollowTarget)
+            {
+                transform.position = target.TransformPoint(AttachedLocalPosition);
+                FaceViewer();
+                return;
+            }
+
             transform.position = target.position + target.forward * 1.35f + Vector3.down * 0.15f;
             transform.rotation = Quaternion.LookRotation(transform.position - target.position, Vector3.up);
-
         }
 
         private void ResolveServices()
@@ -89,7 +112,8 @@ namespace AtlasXR.App.Bootstrap
 
             var canvasObject = new GameObject("Procedure World Space Canvas");
             canvasObject.transform.SetParent(transform, false);
-            canvasObject.transform.localScale = Vector3.one * WorldScale;
+            canvasRoot = canvasObject.transform;
+            ApplyPanelScale();
 
             var canvas = canvasObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
@@ -110,9 +134,37 @@ namespace AtlasXR.App.Bootstrap
             CreateButton(canvasRect, "Next", new Vector2(-180f, -218f), NextStep);
             CreateButton(canvasRect, "Back", new Vector2(0f, -218f), BackStep);
             CreateButton(canvasRect, "Reset", new Vector2(180f, -218f), ResetProcedure);
-            CreateButton(canvasRect, "Ask", new Vector2(360f, -218f), AskCurrentStep);
-            CreateButton(canvasRect, "Voice", new Vector2(360f, -142f), ToggleVoiceCommand);
+            askButtonText = CreateButton(canvasRect, "Ask", new Vector2(360f, -218f), ToggleAskVoiceCommand);
             CreateButton(canvasRect, "Speak", new Vector2(180f, -142f), ToggleSpokenOutput);
+        }
+
+        private void ApplyPanelScale()
+        {
+            if (canvasRoot != null)
+            {
+                canvasRoot.localScale = Vector3.one * (WorldScale * panelScale);
+            }
+        }
+
+        private void FaceViewer()
+        {
+            var viewer = ViewerTarget != null ? ViewerTarget : GetMainCameraTransform();
+            if (viewer == null)
+            {
+                return;
+            }
+
+            transform.rotation = Quaternion.LookRotation(transform.position - viewer.position, Vector3.up);
+        }
+
+        private Transform GetMainCameraTransform()
+        {
+            if (cachedMainCamera == null && Camera.main != null)
+            {
+                cachedMainCamera = Camera.main.transform;
+            }
+
+            return cachedMainCamera;
         }
 
         private Text CreateText(
@@ -142,7 +194,7 @@ namespace AtlasXR.App.Bootstrap
             return text;
         }
 
-        private void CreateButton(RectTransform parent, string label, Vector2 anchoredPosition, Action action)
+        private Text CreateButton(RectTransform parent, string label, Vector2 anchoredPosition, Action action)
         {
             var buttonObject = new GameObject($"{label} Button");
             buttonObject.name = $"{label} Button";
@@ -165,6 +217,7 @@ namespace AtlasXR.App.Bootstrap
 
             var text = CreateText($"{label} Label", rect, Vector2.zero, rect.sizeDelta, 25, TextAnchor.MiddleCenter);
             text.text = label;
+            return text;
         }
 
         public void SetTranscribedSpeech(string transcript)
@@ -232,11 +285,6 @@ namespace AtlasXR.App.Bootstrap
             procedureEngine.Reset();
             status = "Procedure reset.";
             Refresh();
-        }
-
-        private async void AskCurrentStep()
-        {
-            await RunAgentCommand("What should I do next?");
         }
 
         private async System.Threading.Tasks.Task RunAgentCommand(string userCommand)
@@ -412,11 +460,11 @@ namespace AtlasXR.App.Bootstrap
             ConfigureSpeechAudioSource();
         }
 
-        private void ToggleVoiceCommand()
+        private void ToggleAskVoiceCommand()
         {
             if (isRecordingVoice)
             {
-                StopVoiceRecordingAndRun();
+                StopVoiceRecordingAndAsk();
             }
             else
             {
@@ -444,7 +492,7 @@ namespace AtlasXR.App.Bootstrap
             if (!Permission.HasUserAuthorizedPermission(Permission.Microphone))
             {
                 Permission.RequestUserPermission(Permission.Microphone);
-                status = "Microphone permission requested. Press Voice again after allowing it.";
+                status = "Microphone permission requested. Press Ask again after allowing it.";
                 Refresh();
                 return;
             }
@@ -452,11 +500,12 @@ namespace AtlasXR.App.Bootstrap
 
             voiceRecording = Microphone.Start(null, false, MaxVoiceSeconds, VoiceSampleRate);
             isRecordingVoice = voiceRecording != null;
-            status = isRecordingVoice ? "Listening... press Voice again to stop." : "Could not start microphone recording.";
+            SetAskButtonRecordingState(isRecordingVoice);
+            status = isRecordingVoice ? "Listening... press Ask again to send." : "Could not start microphone recording.";
             Refresh();
         }
 
-        private async void StopVoiceRecordingAndRun()
+        private async void StopVoiceRecordingAndAsk()
         {
             if (!isRecordingVoice || voiceRecording == null)
             {
@@ -466,6 +515,7 @@ namespace AtlasXR.App.Bootstrap
             var samplePosition = Microphone.GetPosition(null);
             Microphone.End(null);
             isRecordingVoice = false;
+            SetAskButtonRecordingState(false);
 
             var recordedClip = TrimRecording(voiceRecording, samplePosition);
             voiceRecording = null;
@@ -478,7 +528,7 @@ namespace AtlasXR.App.Bootstrap
 
             try
             {
-                status = "Transcribing voice...";
+                status = "Transcribing question...";
                 Refresh();
 
                 var result = await speechToTextService.TranscribeAsync(
@@ -504,6 +554,14 @@ namespace AtlasXR.App.Bootstrap
             finally
             {
                 Destroy(recordedClip);
+            }
+        }
+
+        private void SetAskButtonRecordingState(bool recording)
+        {
+            if (askButtonText != null)
+            {
+                askButtonText.text = recording ? "Send" : "Ask";
             }
         }
 
@@ -563,7 +621,9 @@ namespace AtlasXR.App.Bootstrap
             var progress = procedureEngine?.Progress;
             if (progress == null || !progress.Value.HasCurrentStep)
             {
-                bodyText.text = $"{status}\n\nAim a Quest controller ray at Start.";
+                bodyText.text = AttachToFollowTarget
+                    ? $"{status}\n\nTouch Start with your right index finger."
+                    : $"{status}\n\nAim a Quest controller ray at Start.";
                 return;
             }
 
